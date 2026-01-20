@@ -50,7 +50,7 @@ router.get('/', async (req: Request, res: Response) => {
 
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const transaction = await prisma.transaction.findUnique({
       where: { id },
@@ -135,7 +135,7 @@ router.post('/', async (req: Request, res: Response) => {
 
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { type, amount, description, date, isRecurring, tags, accountId, categoryId } = req.body;
 
     const existingTransaction = await prisma.transaction.findUnique({
@@ -210,7 +210,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const transaction = await prisma.transaction.findUnique({
       where: { id },
