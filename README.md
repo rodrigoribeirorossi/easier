@@ -79,12 +79,124 @@ FinControl é um assistente financeiro pessoal completo desenvolvido para uso lo
 - **Node.js** - Runtime JavaScript
 - **Express** - Framework web
 - **Prisma ORM** - ORM moderno
-- **SQLite** - Banco de dados local
+- **PostgreSQL** - Banco de dados relacional (via Docker)
+- **SQLite** - Banco de dados local (desenvolvimento)
 - **TypeScript** - Tipagem estática
 
 ## 📦 Instalação
 
-### Pré-requisitos
+### Opção 1: Instalação com Docker (Recomendado para Produção)
+
+#### Pré-requisitos
+- Docker 20.10+
+- Docker Compose 2.0+
+
+#### Início Rápido
+
+1. **Clone o repositório**
+```bash
+git clone https://github.com/rodrigoribeirorossi/easier.git
+cd easier
+```
+
+2. **Configure as variáveis de ambiente**
+```bash
+cp .env.example .env
+# Edite o arquivo .env se necessário
+```
+
+3. **Inicie a aplicação com Docker**
+```bash
+docker-compose up -d
+```
+
+4. **Acesse a aplicação**
+```
+Aplicação: http://localhost:3000
+Adminer (gerenciador DB): http://localhost:8080
+  - Sistema: PostgreSQL
+  - Servidor: db
+  - Usuário: fincontrol
+  - Senha: fincontrol123
+  - Base de dados: fincontrol
+```
+
+#### Comandos Docker Úteis
+
+| Comando | Descrição |
+|---------|-----------|
+| `docker-compose up -d` | Iniciar serviços em background |
+| `docker-compose down` | Parar todos os serviços |
+| `docker-compose logs -f app` | Ver logs da aplicação em tempo real |
+| `docker-compose logs -f db` | Ver logs do banco de dados |
+| `docker-compose ps` | Verificar status dos containers |
+| `docker-compose restart app` | Reiniciar a aplicação |
+| `docker-compose build --no-cache` | Rebuild completo das imagens |
+| `./scripts/backup.sh` | Criar backup do banco de dados |
+| `./scripts/restore.sh backup.sql` | Restaurar backup |
+
+Ou usando os scripts do package.json:
+
+```bash
+npm run docker:up       # Iniciar serviços
+npm run docker:down     # Parar serviços
+npm run docker:logs     # Ver logs
+npm run docker:build    # Rebuild
+npm run docker:restart  # Reiniciar
+```
+
+#### Acesso na Rede Local
+
+Para acessar a aplicação de outros dispositivos na mesma rede:
+
+1. **Descubra o IP do servidor**
+
+```bash
+# Linux/Mac
+ip addr show | grep inet
+# ou
+ifconfig | grep inet
+
+# Windows
+ipconfig
+```
+
+2. **Acesse de qualquer dispositivo na rede**
+```
+http://192.168.X.X:3000
+```
+Substitua `192.168.X.X` pelo IP do seu servidor.
+
+#### Personalização
+
+**Alterar credenciais do banco:**
+Edite o arquivo `docker-compose.yml` e `.env`:
+```yaml
+# docker-compose.yml
+environment:
+  - POSTGRES_USER=seu_usuario
+  - POSTGRES_PASSWORD=sua_senha_segura
+  - POSTGRES_DB=seu_banco
+```
+
+**Alterar portas:**
+```yaml
+# docker-compose.yml
+ports:
+  - "8080:3000"  # Aplicação na porta 8080
+  - "5433:5432"  # PostgreSQL na porta 5433
+```
+
+**Fazer backup automático:**
+Adicione ao crontab (Linux):
+```bash
+# Backup diário às 2h da manhã
+0 2 * * * /caminho/para/easier/scripts/backup.sh
+```
+
+### Opção 2: Instalação Local (Desenvolvimento)
+
+#### Pré-requisitos
 - Node.js 18+ 
 - npm ou yarn
 
@@ -138,6 +250,13 @@ npm run server       # Inicia o servidor Express (com hot-reload)
 npm run db:push      # Sincroniza o schema do Prisma com o banco
 npm run db:seed      # Popula o banco com dados de exemplo
 npm run db:studio    # Abre o Prisma Studio para gerenciar dados
+
+# Docker
+npm run docker:up       # Inicia serviços Docker
+npm run docker:down     # Para serviços Docker
+npm run docker:logs     # Ver logs dos containers
+npm run docker:build    # Rebuild das imagens
+npm run docker:restart  # Reinicia os containers
 ```
 
 ## 📊 Estrutura de Dados
