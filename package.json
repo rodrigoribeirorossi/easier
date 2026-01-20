@@ -15,7 +15,12 @@
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
-  "keywords": ["finance", "personal-finance", "budget", "investment"],
+  "keywords": [
+    "finance",
+    "personal-finance",
+    "budget",
+    "investment"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
@@ -28,7 +33,7 @@
     "autoprefixer": "^10.4.23",
     "nodemon": "^3.1.11",
     "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.18",
+    "tailwindcss": "^3.4.19",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
