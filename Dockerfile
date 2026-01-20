@@ -7,6 +7,7 @@ WORKDIR /app
 
 # Copiar package files
 COPY package*.json ./
+COPY tsconfig*.json ./
 
 # Instalar dependências
 RUN npm ci
@@ -17,8 +18,11 @@ COPY . .
 # Gerar Prisma Client
 RUN npx prisma generate
 
-# Build do frontend e backend
+# Build do frontend
 RUN npm run build
+
+# Compilar TypeScript do backend
+RUN npx tsc -p tsconfig.server.json
 
 # Stage 2: Production
 FROM node:20-alpine AS production
@@ -35,15 +39,11 @@ COPY prisma ./prisma
 # Gerar Prisma Client na imagem de produção
 RUN npx prisma generate
 
-# Copiar build do frontend
+# Copiar build do frontend da stage anterior
 COPY --from=builder /app/dist ./dist
 
-# Copiar código do backend compilado
+# Copiar backend compilado
 COPY --from=builder /app/server ./server
-
-# Copiar outros arquivos necessários
-COPY --from=builder /app/vite.config.ts ./
-COPY --from=builder /app/index.html ./
 
 # Criar usuário não-root
 RUN addgroup -g 1001 -S nodejs && \

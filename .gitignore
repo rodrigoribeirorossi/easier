@@ -49,4 +49,5 @@ prisma/*.db-journal
 /tmp
 
 # Backups
-backups/
+backups/*
+!backups/.gitkeep
