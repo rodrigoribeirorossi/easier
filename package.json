@@ -10,7 +10,12 @@
     "server": "tsx watch server/index.ts",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:build": "docker-compose build --no-cache",
+    "docker:restart": "docker-compose restart"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
