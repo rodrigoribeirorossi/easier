@@ -1,2 +1,231 @@
-# easier
-financial assistant with modern UI and clean navigation for personal use, control payments, simulations of investments, calendar and remembers.
+# FinControl 💰
+
+**Assistente Financeiro Pessoal** - Controle completo de finanças pessoais e familiares com interface moderna e intuitiva.
+
+![FinControl](https://img.shields.io/badge/Status-Prototipo-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
+
+## 📋 Visão Geral
+
+FinControl é um assistente financeiro pessoal completo desenvolvido para uso local (servidor pessoal), oferecendo controle total sobre suas finanças sem depender de serviços em nuvem.
+
+### ✨ Funcionalidades Principais
+
+#### 📊 Dashboard
+- Visão geral com saldo total, entradas e saídas do mês
+- Gráfico de fluxo de caixa mensal
+- Resumo de investimentos
+- Lista de próximos pagamentos com alertas
+
+#### 💳 Gestão de Transações
+- Registro de entradas e saídas
+- Categorização inteligente
+- Filtros avançados (data, categoria, tipo)
+- Suporte a tags personalizadas
+
+#### 🏦 Gestão de Contas
+- Contas bancárias
+- Cartões de crédito
+- Carteiras digitais
+- Dinheiro em espécie
+- Visualização de saldo por conta
+
+#### 📅 Calendário Financeiro
+- Visualização mensal de pagamentos
+- Alertas de vencimento
+- Status visual (pendente, pago, atrasado)
+- Integração com pagamentos recorrentes
+
+#### 💵 Gestão de Pagamentos
+- Contas fixas e variáveis
+- Recorrência (mensal, semanal, anual)
+- Controle de status
+- Histórico completo
+
+#### 📈 Simulador de Investimentos
+- **Poupança** (6.17% a.a.)
+- **CDB 100% CDI** (13.25% a.a.)
+- **Tesouro IPCA+** (11.5% a.a.)
+- **LCI/LCA** (10.6% a.a.)
+- **Ações** (variável)
+- Calculadora de juros compostos
+- Gráficos de projeção comparativos
+- Configuração de aporte mensal
+
+#### 📑 Relatórios
+- Gastos por categoria (gráfico de pizza)
+- Evolução patrimonial
+- Comparativo mensal
+
+#### ⚙️ Configurações
+- Perfis de usuário (família)
+- Tema claro/escuro
+- Notificações personalizadas
+
+## 🛠 Tecnologias
+
+### Frontend
+- **React 18** - Biblioteca UI
+- **TypeScript** - Tipagem estática
+- **Vite** - Build tool moderna
+- **Shadcn/UI** - Design System
+- **Tailwind CSS** - Framework CSS
+- **Recharts** - Gráficos e visualizações
+- **Lucide React** - Ícones
+- **React Router DOM** - Navegação
+- **date-fns** - Manipulação de datas
+
+### Backend
+- **Node.js** - Runtime JavaScript
+- **Express** - Framework web
+- **Prisma ORM** - ORM moderno
+- **SQLite** - Banco de dados local
+- **TypeScript** - Tipagem estática
+
+## 📦 Instalação
+
+### Pré-requisitos
+- Node.js 18+ 
+- npm ou yarn
+
+### Passo a Passo
+
+1. **Clone o repositório**
+```bash
+git clone https://github.com/rodrigoribeirorossi/easier.git
+cd easier
+```
+
+2. **Instale as dependências**
+```bash
+npm install
+```
+
+3. **Configure o banco de dados**
+```bash
+npm run db:push
+npm run db:seed
+```
+
+4. **Inicie o servidor backend** (em um terminal)
+```bash
+npm run server
+```
+
+5. **Inicie o frontend** (em outro terminal)
+```bash
+npm run dev
+```
+
+6. **Acesse a aplicação**
+```
+Frontend: http://localhost:3000
+Backend API: http://localhost:3001
+```
+
+## 🚀 Scripts Disponíveis
+
+```bash
+# Frontend
+npm run dev          # Inicia o servidor de desenvolvimento Vite
+npm run build        # Compila o projeto para produção
+npm run preview      # Preview da build de produção
+
+# Backend
+npm run server       # Inicia o servidor Express (com hot-reload)
+
+# Database
+npm run db:push      # Sincroniza o schema do Prisma com o banco
+npm run db:seed      # Popula o banco com dados de exemplo
+npm run db:studio    # Abre o Prisma Studio para gerenciar dados
+```
+
+## 📊 Estrutura de Dados
+
+### Modelos Principais
+
+- **User** - Usuários/membros da família
+- **Account** - Contas (bancárias, cartões, carteiras)
+- **Category** - Categorias de transações
+- **Transaction** - Transações financeiras
+- **Payment** - Pagamentos e contas a pagar
+- **Investment** - Investimentos
+
+### Diagrama de Relacionamentos
+
+```
+User
+ ├── Accounts
+ ├── Transactions
+ ├── Payments
+ └── Investments
+
+Account
+ ├── Transactions
+ └── Payments
+
+Category
+ ├── Transactions
+ └── Payments
+```
+
+## 🎨 Design e UX
+
+### Paleta de Cores
+- **Primária**: Azul (#3b82f6) - Navegação e ações principais
+- **Sucesso/Entradas**: Verde (#22c55e) - Receitas e saldos positivos
+- **Erro/Saídas**: Vermelho (#ef4444) - Despesas e alertas
+- **Alerta**: Amarelo (#f59e0b) - Avisos e vencimentos próximos
+- **Investimentos**: Roxo (#8b5cf6) - Gráficos e cards de investimento
+
+### Temas
+- **Modo Claro** - Tema padrão para uso diurno
+- **Modo Escuro** - Tema confortável para uso noturno
+
+### Responsividade
+- **Mobile** - Otimizado para smartphones
+- **Tablet** - Layout adaptado para tablets
+- **Desktop** - Experiência completa em telas grandes
+
+## 📱 Páginas
+
+1. **Dashboard** (`/`) - Visão geral e resumos
+2. **Transações** (`/transactions`) - Gestão de transações
+3. **Contas** (`/accounts`) - Gestão de contas
+4. **Calendário** (`/calendar`) - Calendário financeiro
+5. **Pagamentos** (`/payments`) - Gestão de contas a pagar
+6. **Investimentos** (`/investments`) - Simulador de investimentos
+7. **Relatórios** (`/reports`) - Análises e gráficos
+
+## 🔒 Segurança
+
+- Banco de dados local (SQLite)
+- Sem envio de dados para nuvem
+- Ideal para uso em servidor doméstico
+- Controle total sobre seus dados
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Sinta-se à vontade para:
+
+1. Fazer um fork do projeto
+2. Criar uma branch para sua feature (`git checkout -b feature/MinhaFeature`)
+3. Commit suas mudanças (`git commit -m 'Adiciona MinhaFeature'`)
+4. Push para a branch (`git push origin feature/MinhaFeature`)
+5. Abrir um Pull Request
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+## 🆘 Suporte
+
+Para reportar bugs ou solicitar features, abra uma [issue](https://github.com/rodrigoribeirorossi/easier/issues).
+
+## 👨‍💻 Autor
+
+Desenvolvido com ❤️ para ajudar no controle financeiro pessoal e familiar.
+
+---
+
+**FinControl** - Tome controle das suas finanças! 💪💰
