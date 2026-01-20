@@ -40,7 +40,7 @@ router.get('/', async (req: Request, res: Response) => {
 
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const investment = await prisma.investment.findUnique({
       where: { id },
@@ -107,7 +107,7 @@ router.post('/', async (req: Request, res: Response) => {
 
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { name, type, initialAmount, currentAmount, annualRate, startDate, maturityDate } = req.body;
 
     const existingInvestment = await prisma.investment.findUnique({
@@ -150,7 +150,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const investment = await prisma.investment.findUnique({
       where: { id },
