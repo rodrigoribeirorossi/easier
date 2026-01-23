@@ -6,10 +6,20 @@ const prisma = new PrismaClient();
 
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { userId, type } = req.query;
+    // DEBUG: log headers and query to diagnose unexpected authentication
+    console.log('[DEBUG] /api/accounts headers:', JSON.stringify(req.headers));
+    console.log('[DEBUG] /api/accounts query:', JSON.stringify(req.query));
+
+    const { type } = req.query;
+    const userIdFromQuery = req.query.userId as string | undefined
+    const userIdFromHeader = (req.headers['x-user-id'] as string) || undefined
+    const uid = userIdFromQuery || userIdFromHeader
+
+    // If no userId provided (neither query nor header), return empty list
+    if (!uid) return res.json([])
 
     const where: any = {};
-    if (userId) where.userId = userId as string;
+    where.userId = uid;
     if (type) where.type = type as string;
 
     const accounts = await prisma.account.findMany({
@@ -86,8 +96,10 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
   try {
     const { name, type, balance, currency, color, icon, userId } = req.body;
+    const userIdFromHeader = (req.headers['x-user-id'] as string) || undefined
+    const uid = userId || userIdFromHeader
 
-    if (!name || !type || !userId) {
+    if (!name || !type || !uid) {
       return res.status(400).json({ error: 'Missing required fields: name, type, userId' });
     }
 
@@ -99,7 +111,7 @@ router.post('/', async (req: Request, res: Response) => {
         currency: currency ? String(currency) : 'BRL',
         color: color ? String(color) : '#3b82f6',
         icon: icon ? String(icon) : 'wallet',
-        userId: String(userId),
+        userId: String(uid),
       },
       include: {
         user: {
@@ -131,6 +143,12 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     if (!existingAccount) {
       return res.status(404).json({ error: 'Account not found' });
+    }
+
+    // Ensure the authenticated user owns this account
+    const userIdFromHeader = (req.headers['x-user-id'] as string) || undefined
+    if (existingAccount && userIdFromHeader && existingAccount.userId !== userIdFromHeader) {
+      return res.status(403).json({ error: 'Forbidden' })
     }
 
     const account = await prisma.account.update({
@@ -180,6 +198,12 @@ router.delete('/:id', async (req: Request, res: Response) => {
 
     if (!account) {
       return res.status(404).json({ error: 'Account not found' });
+    }
+
+    // ensure authenticated user owns this account
+    const userIdFromHeader = (req.headers['x-user-id'] as string) || undefined
+    if (account && userIdFromHeader && account.userId !== userIdFromHeader) {
+      return res.status(403).json({ error: 'Forbidden' })
     }
 
     await prisma.account.delete({

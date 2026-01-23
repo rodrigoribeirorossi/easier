@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import useUser from '@/hooks/useUser'
 import { api } from '@/lib/api'
 import { Transaction, Account, Category } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/formatters'
@@ -14,23 +15,34 @@ export function TransactionList() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [filters, setFilters] = useState({
-    type: '',
+    type: 'all',
     category: '',
     startDate: '',
     endDate: '',
     search: '',
   })
 
+  const { user } = useUser()
+
   useEffect(() => {
+    if (!user) {
+      setTransactions([])
+      setAccounts([])
+      setCategories([])
+      setLoading(false)
+      return
+    }
     loadData()
-  }, [filters])
+  }, [user && user.id, filters])
 
   async function loadData() {
     try {
       setLoading(true)
+      setError(null)
       const [txs, accs, cats] = await Promise.all([
         api.getTransactions(buildQueryParams()),
         api.getAccounts(),
@@ -41,6 +53,7 @@ export function TransactionList() {
       setCategories(cats)
     } catch (error) {
       console.error('Failed to load transactions:', error)
+      try { setError((error as Error).message || 'Failed to load transactions') } catch { setError('Failed to load transactions') }
     } finally {
       setLoading(false)
     }
@@ -48,7 +61,7 @@ export function TransactionList() {
 
   function buildQueryParams() {
     const params: any = {}
-    if (filters.type) params.type = filters.type
+    if (filters.type && filters.type !== 'all') params.type = filters.type
     if (filters.startDate) params.startDate = filters.startDate
     if (filters.endDate) params.endDate = filters.endDate
     return params
@@ -59,6 +72,9 @@ export function TransactionList() {
       return false
     }
     if (filters.category && transaction.category?.name !== filters.category) {
+      return false
+    }
+    if (filters.type && filters.type !== 'all' && transaction.type !== filters.type) {
       return false
     }
     return true
@@ -115,7 +131,7 @@ export function TransactionList() {
       <TransactionFilters
         filters={filters}
         onFilterChange={setFilters}
-        onClear={() => setFilters({ type: '', category: '', startDate: '', endDate: '', search: '' })}
+        onClear={() => setFilters({ type: 'all', category: '', startDate: '', endDate: '', search: '' })}
       />
 
       <Card>
@@ -123,7 +139,9 @@ export function TransactionList() {
           <CardTitle>Todas as Transações</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {error ? (
+            <p className="text-center text-red-500 py-8">{error}</p>
+          ) : loading ? (
             <div className="space-y-4">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="flex items-center gap-4 p-4 border border-border rounded-lg">
@@ -137,9 +155,7 @@ export function TransactionList() {
               ))}
             </div>
           ) : filteredTransactions.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              Nenhuma transação encontrada
-            </p>
+            <p className="text-center text-muted-foreground py-8">Nenhuma transação encontrada</p>
           ) : (
             <div className="space-y-2">
               {filteredTransactions.map((transaction) => (
@@ -152,9 +168,7 @@ export function TransactionList() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <p className="font-medium">{transaction.description}</p>
-                        <Badge variant="outline" className="text-xs">
-                          {getTypeLabel(transaction.type)}
-                        </Badge>
+                        <Badge variant="outline" className="text-xs">{getTypeLabel(transaction.type)}</Badge>
                       </div>
                       <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
                         <span>{formatDate(transaction.date)}</span>
@@ -176,26 +190,18 @@ export function TransactionList() {
 
                   <div className="flex items-center gap-3">
                     <span className={`text-lg font-semibold ${
-                      transaction.type === 'income' ? 'text-green-600' : 
-                      transaction.type === 'expense' ? 'text-red-600' : 
+                      transaction.type === 'income' ? 'text-green-600' :
+                      transaction.type === 'expense' ? 'text-red-600' :
                       'text-blue-600'
                     }`}>
                       {transaction.type === 'expense' ? '-' : '+'} {formatCurrency(transaction.amount)}
                     </span>
 
                     <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => { setSelectedTransaction(transaction); setDialogOpen(true); }}
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => { setSelectedTransaction(transaction); setDialogOpen(true); }}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(transaction.id)}
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(transaction.id)}>
                         <Trash2 className="h-4 w-4 text-red-600" />
                       </Button>
                     </div>

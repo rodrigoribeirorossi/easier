@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import useUser from '@/hooks/useUser'
 import { api } from '@/lib/api'
 import { CategoryChart } from './CategoryChart'
 import { EvolutionChart } from './EvolutionChart'
@@ -34,9 +35,18 @@ export function Reports() {
   const [evolutionData, setEvolutionData] = useState<EvolutionData[]>([])
   const [loading, setLoading] = useState(true)
 
+  const { user } = useUser()
+
   useEffect(() => {
+    if (!user) {
+      setCategoryData([])
+      setMonthlyData([])
+      setEvolutionData([])
+      setLoading(false)
+      return
+    }
     loadReportsData()
-  }, [])
+  }, [user && user.id])
 
   async function loadReportsData() {
     try {

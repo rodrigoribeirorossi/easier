@@ -1,20 +1,29 @@
 import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcrypt'
 
 const prisma = new PrismaClient()
 
 async function main() {
-  // Criar usuário principal
+  // Criar usuário principal com senha para testes
+  const passwordPlain = 'password123'
+  const passwordHash = await bcrypt.hash(passwordPlain, 10)
+
   const user = await prisma.user.upsert({
-    where: { email: 'user@fincontrol.com' },
-    update: {},
+    where: { email: 'user@easier.com' },
+    update: {
+      // garante que o admin tenha senha nos testes
+      passwordHash,
+    },
     create: {
-      email: 'user@fincontrol.com',
+      email: 'user@easier.com',
       name: 'Usuário Principal',
       role: 'admin',
+      passwordHash,
     },
   })
 
   console.log('Usuário criado:', user)
+  console.log('Credenciais de teste: user@easier.com / password123')
 
   // Criar categorias
   const categories = await Promise.all([

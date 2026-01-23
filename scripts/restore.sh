@@ -25,7 +25,7 @@ if [[ ! $REPLY =~ ^[Ss]$ ]]; then
 fi
 
 # Restaurar backup
-docker exec -i fincontrol-db psql -U fincontrol fincontrol < "$BACKUP_FILE"
+docker exec -i easier-db psql -U easier easier < "$BACKUP_FILE"
 
 if [ $? -eq 0 ]; then
     echo "✅ Backup restaurado com sucesso!"

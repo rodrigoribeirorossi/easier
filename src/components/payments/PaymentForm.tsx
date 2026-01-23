@@ -27,6 +27,7 @@ export function PaymentForm({ open, onOpenChange, payment, accounts, categories,
     accountId: '',
   })
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (payment) {
@@ -59,6 +60,7 @@ export function PaymentForm({ open, onOpenChange, payment, accounts, categories,
     setLoading(true)
 
     try {
+      setError(null)
       await onSubmit({
         ...formData,
         amount: parseFloat(formData.amount),
@@ -66,6 +68,11 @@ export function PaymentForm({ open, onOpenChange, payment, accounts, categories,
       onOpenChange(false)
     } catch (error) {
       console.error('Failed to submit payment:', error)
+      try {
+        setError((error as Error).message || 'Erro ao salvar pagamento')
+      } catch {
+        setError('Erro ao salvar pagamento')
+      }
     } finally {
       setLoading(false)
     }
@@ -194,6 +201,7 @@ export function PaymentForm({ open, onOpenChange, payment, accounts, categories,
           </div>
 
           <DialogFooter>
+            {error && <div className="text-sm text-red-500 mr-auto">{error}</div>}
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>

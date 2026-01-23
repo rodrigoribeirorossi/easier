@@ -56,7 +56,7 @@ export function Sidebar() {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-6 border-b border-border">
-            <h1 className="text-2xl font-bold text-primary">FinControl</h1>
+            <h1 className="text-2xl font-bold text-primary">easier</h1>
             <p className="text-sm text-muted-foreground">Controle Financeiro</p>
           </div>
 
@@ -83,7 +83,7 @@ export function Sidebar() {
           {/* Footer */}
           <div className="p-4 border-t border-border">
             <p className="text-xs text-muted-foreground text-center">
-              © 2024 FinControl
+              © 2024 easier
             </p>
           </div>
         </div>

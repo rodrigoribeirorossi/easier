@@ -1,19 +1,32 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import jwt from 'jsonwebtoken'
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret'
 
 const router = Router();
 const prisma = new PrismaClient();
 
 router.get('/me', async (req: Request, res: Response) => {
   try {
-    const { userId } = req.query;
+    // Require Authorization: Bearer <token>
+    const authHeader = req.headers.authorization as string | undefined
+    if (!authHeader) return res.status(401).json({ error: 'Authorization header missing' })
+    const parts = authHeader.split(' ')
+    const token = parts.length === 2 ? parts[1] : undefined
+    if (!token) return res.status(401).json({ error: 'Token missing' })
 
-    if (!userId) {
-      return res.status(400).json({ error: 'userId query parameter is required' });
+    let payload: any
+    try {
+      payload = jwt.verify(token, JWT_SECRET) as any
+    } catch (e) {
+      return res.status(401).json({ error: 'Invalid token' })
     }
 
+    if (!payload || !payload.userId) return res.status(401).json({ error: 'Invalid token payload' })
+
     const user = await prisma.user.findUnique({
-      where: { id: String(userId) },
+      where: { id: String(payload.userId) },
       select: {
         id: true,
         name: true,
@@ -23,18 +36,16 @@ router.get('/me', async (req: Request, res: Response) => {
         createdAt: true,
         updatedAt: true,
       },
-    });
+    })
 
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ error: 'User not found' })
 
-    res.json(user);
+    res.json(user)
   } catch (error) {
-    console.error('Error fetching user:', error);
-    res.status(500).json({ error: 'Failed to fetch user' });
+    console.error('Error fetching user:', error)
+    res.status(500).json({ error: 'Failed to fetch user' })
   }
-});
+})
 
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -59,6 +70,31 @@ router.get('/', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch users' });
   }
 });
+
+// Lightweight login: find or create by email, return user
+router.post('/login', async (req: Request, res: Response) => {
+  try {
+    const { email, name, avatar } = req.body
+
+    if (!email) return res.status(400).json({ error: 'email is required' })
+
+    const existing = await prisma.user.findUnique({ where: { email: String(email) } })
+    if (existing) return res.json(existing)
+
+    const user = await prisma.user.create({
+      data: {
+        email: String(email),
+        name: name ? String(name) : String(email).split('@')[0],
+        avatar: avatar ? String(avatar) : null,
+      },
+    })
+
+    res.status(201).json(user)
+  } catch (error) {
+    console.error('Login error:', error)
+    res.status(500).json({ error: 'Failed to login' })
+  }
+})
 
 router.get('/:id', async (req: Request, res: Response) => {
   try {

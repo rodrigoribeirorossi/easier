@@ -1,13 +1,13 @@
-# FinControl 💰
+# easier 💰
 
 **Assistente Financeiro Pessoal** - Controle completo de finanças pessoais e familiares com interface moderna e intuitiva.
 
-![FinControl](https://img.shields.io/badge/Status-Prototipo-blue)
+![easier](https://img.shields.io/badge/Status-Prototipo-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 ## 📋 Visão Geral
 
-FinControl é um assistente financeiro pessoal completo desenvolvido para uso local (servidor pessoal), oferecendo controle total sobre suas finanças sem depender de serviços em nuvem.
+easier é um assistente financeiro pessoal completo desenvolvido para uso local (servidor pessoal), oferecendo controle total sobre suas finanças sem depender de serviços em nuvem.
 
 ### ✨ Funcionalidades Principais
 
@@ -116,9 +116,9 @@ Aplicação: http://localhost:3000
 Adminer (gerenciador DB): http://localhost:8080
   - Sistema: PostgreSQL
   - Servidor: db
-  - Usuário: fincontrol
-  - Senha: fincontrol123
-  - Base de dados: fincontrol
+  - Usuário: easier
+  - Senha: easier123
+  - Base de dados: easier
 ```
 
 #### Comandos Docker Úteis
@@ -347,4 +347,4 @@ Desenvolvido com ❤️ para ajudar no controle financeiro pessoal e familiar.
 
 ---
 
-**FinControl** - Tome controle das suas finanças! 💪💰
+**easier** - Tome controle das suas finanças! 💪💰

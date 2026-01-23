@@ -6,11 +6,16 @@ const prisma = new PrismaClient();
 
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { userId, type, sortBy = 'startDate', order = 'desc' } = req.query;
+    const { type, sortBy = 'startDate', order = 'desc' } = req.query;
+    const userIdFromQuery = req.query.userId as string | undefined
+    const userIdFromHeader = (req.headers['x-user-id'] as string) || undefined
+    const uid = userIdFromQuery || userIdFromHeader
+
+    // If no userId provided, return empty list
+    if (!uid) return res.json([])
 
     const where: any = {};
-
-    if (userId) where.userId = userId as string;
+    where.userId = uid;
     if (type) where.type = type as string;
 
     const orderBy: any = {};
@@ -70,8 +75,10 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
   try {
     const { name, type, initialAmount, currentAmount, annualRate, startDate, maturityDate, userId } = req.body;
+    const userIdFromHeader = (req.headers['x-user-id'] as string) || undefined
+    const uid = userId || userIdFromHeader
 
-    if (!name || !type || !initialAmount || !currentAmount || !annualRate || !startDate || !userId) {
+    if (!name || !type || !initialAmount || !currentAmount || !annualRate || !startDate || !uid) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -84,7 +91,7 @@ router.post('/', async (req: Request, res: Response) => {
         annualRate: parseFloat(String(annualRate)),
         startDate: new Date(startDate),
         maturityDate: maturityDate ? new Date(maturityDate) : null,
-        userId: String(userId),
+        userId: String(uid),
       },
       include: {
         user: {
@@ -116,6 +123,12 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     if (!existingInvestment) {
       return res.status(404).json({ error: 'Investment not found' });
+    }
+
+    // ensure authenticated user owns this investment
+    const userIdFromHeader = (req.headers['x-user-id'] as string) || undefined
+    if (existingInvestment && userIdFromHeader && existingInvestment.userId !== userIdFromHeader) {
+      return res.status(403).json({ error: 'Forbidden' })
     }
 
     const investment = await prisma.investment.update({
@@ -158,6 +171,12 @@ router.delete('/:id', async (req: Request, res: Response) => {
 
     if (!investment) {
       return res.status(404).json({ error: 'Investment not found' });
+    }
+
+    // ensure authenticated user owns this investment
+    const userIdFromHeader = (req.headers['x-user-id'] as string) || undefined
+    if (investment && userIdFromHeader && investment.userId !== userIdFromHeader) {
+      return res.status(403).json({ error: 'Forbidden' })
     }
 
     await prisma.investment.delete({

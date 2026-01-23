@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import useUser from '@/hooks/useUser'
 import { api } from '@/lib/api'
 import { Payment, Account, Category } from '@/types'
 import { formatCurrency, formatDate, getPaymentStatusLabel } from '@/lib/formatters'
@@ -19,9 +20,18 @@ export function PaymentList() {
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
   const [activeTab, setActiveTab] = useState('all')
 
+  const { user } = useUser()
+
   useEffect(() => {
+    if (!user) {
+      setPayments([])
+      setAccounts([])
+      setCategories([])
+      setLoading(false)
+      return
+    }
     loadData()
-  }, [])
+  }, [user && user.id])
 
   async function loadData() {
     try {

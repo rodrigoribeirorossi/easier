@@ -6,11 +6,18 @@ const prisma = new PrismaClient();
 
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { userId, accountId, categoryId, type, startDate, endDate, sortBy = 'date', order = 'desc' } = req.query;
+    const { accountId, categoryId, type, startDate, endDate, sortBy = 'date', order = 'desc' } = req.query;
+
+    const userIdFromQuery = req.query.userId as string | undefined
+    const userIdFromHeader = (req.headers['x-user-id'] as string) || undefined
+    const uid = userIdFromQuery || userIdFromHeader
+
+    // If no userId provided, return empty list to avoid returning everyone else's transactions
+    if (!uid) return res.json([])
 
     const where: any = {};
 
-    if (userId) where.userId = userId as string;
+    where.userId = uid;
     if (accountId) where.accountId = accountId as string;
     if (categoryId) where.categoryId = categoryId as string;
     if (type) where.type = type as string;
@@ -83,7 +90,10 @@ router.post('/', async (req: Request, res: Response) => {
   try {
     const { type, amount, description, date, isRecurring, tags, accountId, categoryId, userId } = req.body;
 
-    if (!type || !amount || !description || !date || !accountId || !categoryId || !userId) {
+    const userIdFromHeader = (req.headers['x-user-id'] as string) || undefined
+    const uid = userId || userIdFromHeader
+
+    if (!type || !amount || !description || !date || !accountId || !categoryId || !uid) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -98,7 +108,7 @@ router.post('/', async (req: Request, res: Response) => {
           tags: tags ? JSON.stringify(tags) : null,
           accountId: String(accountId),
           categoryId: String(categoryId),
-          userId: String(userId),
+          userId: String(uid),
         },
         include: {
           account: true,
@@ -145,6 +155,12 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     if (!existingTransaction) {
       return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    // ensure authenticated user owns this transaction
+    const userIdFromHeader = (req.headers['x-user-id'] as string) || undefined
+    if (existingTransaction && userIdFromHeader && existingTransaction.userId !== userIdFromHeader) {
+      return res.status(403).json({ error: 'Forbidden' })
     }
 
     const transaction = await prisma.$transaction(async (tx) => {
@@ -219,6 +235,12 @@ router.delete('/:id', async (req: Request, res: Response) => {
 
     if (!transaction) {
       return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    // ensure authenticated user owns this transaction
+    const userIdFromHeader = (req.headers['x-user-id'] as string) || undefined
+    if (transaction && userIdFromHeader && transaction.userId !== userIdFromHeader) {
+      return res.status(403).json({ error: 'Forbidden' })
     }
 
     await prisma.$transaction(async (tx) => {

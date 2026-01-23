@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import useUser from '@/hooks/useUser'
 import { api } from '@/lib/api'
 import { Account } from '@/types'
 import { Button } from '@/components/ui/button'
@@ -13,9 +14,16 @@ export function AccountList() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
 
+  const { user } = useUser()
+
   useEffect(() => {
+    if (!user) {
+      setAccounts([])
+      setLoading(false)
+      return
+    }
     loadAccounts()
-  }, [])
+  }, [user && user.id])
 
   async function loadAccounts() {
     try {

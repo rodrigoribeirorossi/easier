@@ -6,11 +6,16 @@ const prisma = new PrismaClient();
 
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { userId, status, categoryId, startDate, endDate, sortBy = 'dueDate', order = 'asc' } = req.query;
+    const { status, categoryId, startDate, endDate, sortBy = 'dueDate', order = 'asc' } = req.query;
+    const userIdFromQuery = req.query.userId as string | undefined
+    const userIdFromHeader = (req.headers['x-user-id'] as string) || undefined
+    const uid = userIdFromQuery || userIdFromHeader
+
+    // If no userId provided, return empty list
+    if (!uid) return res.json([])
 
     const where: any = {};
-
-    if (userId) where.userId = userId as string;
+    where.userId = uid;
     if (status) where.status = status as string;
     if (categoryId) where.categoryId = categoryId as string;
 
@@ -82,7 +87,12 @@ router.post('/', async (req: Request, res: Response) => {
   try {
     const { name, amount, dueDate, isRecurring, frequency, status, categoryId, accountId, userId } = req.body;
 
-    if (!name || !amount || !dueDate || !categoryId || !userId) {
+    // Derive user id from header if not provided in body
+    const userIdFromHeader = (req.headers['x-user-id'] as string) || undefined
+    const uid = userId || userIdFromHeader
+
+    // Validate required fields (user may be provided via header)
+    if (!name || amount === undefined || !dueDate || !categoryId || !uid) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -96,7 +106,7 @@ router.post('/', async (req: Request, res: Response) => {
         status: status ? String(status) : 'pending',
         categoryId: String(categoryId),
         accountId: accountId ? String(accountId) : null,
-        userId: String(userId),
+        userId: String(uid),
       },
       include: {
         category: true,
@@ -130,6 +140,12 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     if (!existingPayment) {
       return res.status(404).json({ error: 'Payment not found' });
+    }
+
+    // ensure authenticated user owns this payment
+    const userIdFromHeader = (req.headers['x-user-id'] as string) || undefined
+    if (existingPayment && userIdFromHeader && existingPayment.userId !== userIdFromHeader) {
+      return res.status(403).json({ error: 'Forbidden' })
     }
 
     const payment = await prisma.payment.update({
@@ -175,6 +191,12 @@ router.delete('/:id', async (req: Request, res: Response) => {
 
     if (!payment) {
       return res.status(404).json({ error: 'Payment not found' });
+    }
+
+    // ensure authenticated user owns this payment
+    const userIdFromHeader = (req.headers['x-user-id'] as string) || undefined
+    if (payment && userIdFromHeader && payment.userId !== userIdFromHeader) {
+      return res.status(403).json({ error: 'Forbidden' })
     }
 
     await prisma.payment.delete({

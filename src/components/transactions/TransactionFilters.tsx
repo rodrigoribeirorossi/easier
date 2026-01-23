@@ -23,7 +23,13 @@ export function TransactionFilters({ filters, onFilterChange, onClear }: Transac
     onFilterChange({ ...filters, [key]: value })
   }
 
-  const hasActiveFilters = Object.values(filters).some(v => v !== '')
+  const hasActiveFilters = (
+    filters.type !== 'all' ||
+    filters.category !== '' ||
+    filters.startDate !== '' ||
+    filters.endDate !== '' ||
+    filters.search !== ''
+  )
 
   return (
     <div className="bg-card border border-border rounded-lg p-4">
@@ -55,7 +61,7 @@ export function TransactionFilters({ filters, onFilterChange, onClear }: Transac
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="income">Receita</SelectItem>
               <SelectItem value="expense">Despesa</SelectItem>
               <SelectItem value="transfer">Transferência</SelectItem>

@@ -6,11 +6,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: fincontrol-app
+    container_name: easier-app
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://fincontrol:fincontrol123@db:5432/fincontrol
+      - DATABASE_URL=postgresql://easier:easier123@db:5432/easier
       - NODE_ENV=production
       - PORT=3000
     depends_on:
@@ -18,44 +18,44 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - fincontrol-network
+      - easier-network
 
   # Serviço PostgreSQL
   db:
     image: postgres:16-alpine
-    container_name: fincontrol-db
+    container_name: easier-db
     environment:
-      - POSTGRES_USER=fincontrol
-      - POSTGRES_PASSWORD=fincontrol123
-      - POSTGRES_DB=fincontrol
+      - POSTGRES_USER=easier
+      - POSTGRES_PASSWORD=easier123
+      - POSTGRES_DB=easier
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backups:/backups
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U fincontrol"]
+      test: ["CMD-SHELL", "pg_isready -U easier"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
     networks:
-      - fincontrol-network
+      - easier-network
 
   # Adminer - Gerenciador web de banco de dados (opcional)
   adminer:
     image: adminer:latest
-    container_name: fincontrol-adminer
+    container_name: easier-adminer
     ports:
       - "8080:8080"
     depends_on:
       - db
     restart: unless-stopped
     networks:
-      - fincontrol-network
+      - easier-network
 
 networks:
-  fincontrol-network:
+  easier-network:
     driver: bridge
 
 volumes:

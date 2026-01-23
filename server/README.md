@@ -1,6 +1,6 @@
-# FinControl API Server
+# easier API Server
 
-RESTful API server for the FinControl personal finance application.
+RESTful API server for the easier personal finance application.
 
 ## Getting Started
 

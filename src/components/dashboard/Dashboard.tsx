@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import useUser from '@/hooks/useUser'
 import { api } from '@/lib/api'
 import { DashboardSummary, Payment } from '@/types'
 import { SummaryCards } from './SummaryCards'
@@ -12,6 +13,7 @@ interface CashFlowData {
 }
 
 export function Dashboard() {
+  const { user } = useUser()
   const [summary, setSummary] = useState<DashboardSummary>({
     totalBalance: 0,
     monthIncome: 0,
@@ -24,8 +26,23 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // If no user is logged, clear data and skip fetching
+    if (!user) {
+      setSummary({
+        totalBalance: 0,
+        monthIncome: 0,
+        monthExpenses: 0,
+        monthSavings: 0,
+        totalInvestments: 0,
+      })
+      setCashFlowData([])
+      setUpcomingPayments([])
+      setLoading(false)
+      return
+    }
+
     loadDashboardData()
-  }, [])
+  }, [user && user.id])
 
   async function loadDashboardData() {
     try {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import useUser from '@/hooks/useUser'
 import { api } from '@/lib/api'
 import { Payment } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,9 +13,16 @@ export function FinancialCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [loading, setLoading] = useState(true)
 
+  const { user } = useUser()
+
   useEffect(() => {
+    if (!user) {
+      setPayments([])
+      setLoading(false)
+      return
+    }
     loadPayments()
-  }, [currentDate])
+  }, [user && user.id, currentDate])
 
   async function loadPayments() {
     try {
