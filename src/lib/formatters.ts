@@ -5,9 +5,38 @@ export function formatCurrency(amount: number, currency = 'BRL'): string {
   }).format(amount)
 }
 
+export function parseAsLocalDate(date: Date | string | undefined | null): Date {
+  if (!date) return new Date()
+  if (date instanceof Date) return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  if (typeof date === 'string') {
+    // treat plain YYYY-MM-DD as local date (avoid UTC midnight shift)
+    const m = date.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+    if (m) {
+      const y = parseInt(m[1], 10)
+      const mo = parseInt(m[2], 10) - 1
+      const d = parseInt(m[3], 10)
+      return new Date(y, mo, d)
+    }
+    const parsed = new Date(date)
+    if (!isNaN(parsed.getTime())) {
+      // If the string was a full ISO timestamp at UTC midnight (00:00:00Z),
+      // treat it as a date-only value in local timezone to avoid showing previous day.
+      // Detect by checking UTC hours/minutes/seconds are zero and the original
+      // string contains a 'T' (iso) and a 'Z' (utc). This handles persisted
+      // values like '2026-01-20T00:00:00.000Z'.
+      const isIso = date.includes('T') && date.includes('Z')
+      if (isIso && parsed.getUTCHours() === 0 && parsed.getUTCMinutes() === 0 && parsed.getUTCSeconds() === 0) {
+        return new Date(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate())
+      }
+      return parsed
+    }
+  }
+  return new Date()
+}
+
 export function formatDate(date: Date | string, format: 'short' | 'long' = 'short'): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date
-  
+  const dateObj = parseAsLocalDate(date)
+
   if (format === 'long') {
     return new Intl.DateTimeFormat('pt-BR', {
       day: '2-digit',
@@ -24,7 +53,7 @@ export function formatDate(date: Date | string, format: 'short' | 'long' = 'shor
 }
 
 export function formatShortDate(date: Date | string): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date
+  const dateObj = parseAsLocalDate(date)
   return new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
     month: 'short',
@@ -48,7 +77,7 @@ export function getMonthName(monthIndex: number): string {
 }
 
 export function getDaysUntil(date: Date | string): number {
-  const targetDate = typeof date === 'string' ? new Date(date) : date
+  const targetDate = parseAsLocalDate(date)
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   targetDate.setHours(0, 0, 0, 0)
@@ -87,4 +116,88 @@ export function getFrequencyLabel(frequency: string): string {
     yearly: 'Anual',
   }
   return labels[frequency] || frequency
+}
+
+// Recurrence helpers
+import { Payment } from '@/types'
+
+export function generateRecurringDates(
+  start: Date | string,
+  frequency: string | undefined,
+  end?: Date | string | null,
+  maxMonths = 12
+): Date[] {
+  const dates: Date[] = []
+  if (!frequency) return dates
+
+  const startDate = parseAsLocalDate(start)
+  const endDate = end ? parseAsLocalDate(end) : null
+
+  // If no explicit end date, limit to maxMonths ahead
+  const limitDate = endDate || new Date(new Date(startDate).setMonth(startDate.getMonth() + maxMonths))
+
+  let current = new Date(startDate)
+  while (current <= limitDate) {
+    dates.push(new Date(current))
+
+    if (frequency === 'weekly') {
+      current.setDate(current.getDate() + 7)
+    } else if (frequency === 'monthly') {
+      // advance to next month keeping the same day when possible
+      const day = current.getDate()
+      current.setMonth(current.getMonth() + 1)
+      // if month rolled over (e.g., Jan 31 -> Mar 3), clamp to last day
+      while (current.getDate() < day) {
+        current.setDate(current.getDate() + 1)
+      }
+    } else if (frequency === 'yearly') {
+      current.setFullYear(current.getFullYear() + 1)
+    } else {
+      break
+    }
+  }
+
+  return dates
+}
+
+export function expandRecurringPaymentOccurrences(payment: any, maxMonths = 12): any[] {
+  if (!payment.isRecurring) return [payment]
+
+  const dates = generateRecurringDates(payment.dueDate, payment.frequency, payment.recurrenceEndDate || null, maxMonths)
+
+  // Map each generated date to a payment-like object (unique id per occurrence)
+  return dates.map(d => {
+    // find if there's an explicit occurrence stored in backend matching this date
+    const occurrence = (payment.occurrences || []).find((o: any) => {
+      const od = parseAsLocalDate(o.dueDate)
+      return od.getFullYear() === d.getFullYear() && od.getMonth() === d.getMonth() && od.getDate() === d.getDate()
+    })
+
+    if (occurrence) {
+      return {
+        ...payment,
+        id: occurrence.id,
+        dueDate: parseAsLocalDate(occurrence.dueDate),
+        status: occurrence.status,
+      }
+    }
+
+    // if this is the original configured dueDate, keep original id and status
+    const baseDate = parseAsLocalDate(payment.dueDate)
+    if (baseDate.getFullYear() === d.getFullYear() && baseDate.getMonth() === d.getMonth() && baseDate.getDate() === d.getDate()) {
+      return {
+        ...payment,
+        id: payment.id,
+        dueDate: d,
+        status: payment.status,
+      }
+    }
+
+    return {
+      ...payment,
+      id: `${payment.id}::${d.toISOString()}`,
+      dueDate: d,
+      status: 'pending',
+    }
+  })
 }

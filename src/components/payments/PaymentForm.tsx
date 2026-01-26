@@ -25,6 +25,7 @@ export function PaymentForm({ open, onOpenChange, payment, accounts, categories,
     status: 'pending',
     categoryId: '',
     accountId: '',
+    recurrenceEndDate: '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -40,6 +41,7 @@ export function PaymentForm({ open, onOpenChange, payment, accounts, categories,
         status: payment.status,
         categoryId: payment.categoryId,
         accountId: payment.accountId || '',
+        recurrenceEndDate: payment.recurrenceEndDate ? new Date(payment.recurrenceEndDate).toISOString().split('T')[0] : '',
       })
     } else {
       setFormData({
@@ -51,6 +53,7 @@ export function PaymentForm({ open, onOpenChange, payment, accounts, categories,
         status: 'pending',
         categoryId: categories[0]?.id || '',
         accountId: accounts[0]?.id || '',
+        recurrenceEndDate: '',
       })
     }
   }, [payment, accounts, categories, open])
@@ -64,6 +67,7 @@ export function PaymentForm({ open, onOpenChange, payment, accounts, categories,
       await onSubmit({
         ...formData,
         amount: parseFloat(formData.amount),
+        recurrenceEndDate: formData.recurrenceEndDate || null,
       })
       onOpenChange(false)
     } catch (error) {
@@ -165,6 +169,19 @@ export function PaymentForm({ open, onOpenChange, payment, accounts, categories,
                   <SelectItem value="yearly">Anual</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          )}
+
+          {formData.isRecurring && (
+            <div className="space-y-2">
+              <Label htmlFor="recurrenceEndDate">Data de Fim</Label>
+              <Input
+                id="recurrenceEndDate"
+                type="date"
+                value={formData.recurrenceEndDate}
+                onChange={(e) => setFormData({ ...formData, recurrenceEndDate: e.target.value })}
+                aria-label="Data de fim da recorrência"
+              />
             </div>
           )}
 

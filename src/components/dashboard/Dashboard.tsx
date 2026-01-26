@@ -5,6 +5,7 @@ import { DashboardSummary, Payment } from '@/types'
 import { SummaryCards } from './SummaryCards'
 import { CashFlowChart } from './CashFlowChart'
 import { UpcomingPayments } from './UpcomingPayments'
+import { parseAsLocalDate } from '@/lib/formatters'
 
 interface CashFlowData {
   month: string
@@ -62,7 +63,7 @@ export function Dashboard() {
       const currentYear = new Date().getFullYear()
 
       const monthTransactions = transactions.filter((t: any) => {
-        const date = new Date(t.date)
+        const date = parseAsLocalDate(t.date)
         return date.getMonth() === currentMonth && date.getFullYear() === currentYear
       })
 
@@ -90,7 +91,7 @@ export function Dashboard() {
 
       const flowData = last6Months.map(date => {
         const monthTxs = transactions.filter((t: any) => {
-          const txDate = new Date(t.date)
+          const txDate = parseAsLocalDate(t.date)
           return txDate.getMonth() === date.getMonth() && txDate.getFullYear() === date.getFullYear()
         })
 
@@ -104,7 +105,7 @@ export function Dashboard() {
       setCashFlowData(flowData)
 
       const sortedPayments = payments
-        .sort((a: any, b: any) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+        .sort((a: any, b: any) => parseAsLocalDate(a.dueDate).getTime() - parseAsLocalDate(b.dueDate).getTime())
         .slice(0, 5)
 
       setUpcomingPayments(sortedPayments)

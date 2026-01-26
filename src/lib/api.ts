@@ -158,6 +158,32 @@ export const api = {
     return response.json()
   },
 
+  async createPaymentOccurrence(paymentId: string, data: any) {
+    const response = await request(`/payments/${paymentId}/occurrences`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    if (!response.ok) {
+      let body: any = null
+      try { body = await response.json() } catch (e) { /* ignore */ }
+      const msg = body && (body.error || body.message) ? (body.error || body.message) : 'Failed to create occurrence'
+      throw new Error(msg)
+    }
+    return response.json()
+  },
+  async deletePaymentOccurrence(paymentId: string, occurrenceId: string) {
+    const response = await request(`/payments/${paymentId}/occurrences/${occurrenceId}`, {
+      method: 'DELETE',
+    })
+    if (!response.ok) throw new Error('Failed to delete occurrence')
+  },
+
+  async getPayment(id: string) {
+    const response = await request(`/payments/${id}`)
+    if (!response.ok) throw new Error('Failed to fetch payment')
+    return response.json()
+  },
+
   async deletePayment(id: string) {
     const response = await request(`/payments/${id}`, {
       method: 'DELETE',

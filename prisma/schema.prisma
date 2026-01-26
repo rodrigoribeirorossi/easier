@@ -57,6 +57,8 @@ model Transaction {
   description String
   date        DateTime
   isRecurring Boolean  @default(false)
+  recurrenceEndDate DateTime?
+  frequency   String?
   tags        String?
   accountId   String
   categoryId  String
@@ -73,6 +75,7 @@ model Payment {
   name        String
   amount      Float
   dueDate     DateTime
+  recurrenceEndDate DateTime?
   isRecurring Boolean  @default(false)
   frequency   String?
   status      String   @default("pending")
@@ -84,6 +87,18 @@ model Payment {
   account     Account? @relation(fields: [accountId], references: [id])
   category    Category @relation(fields: [categoryId], references: [id])
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  occurrences PaymentOccurrence[]
+}
+
+model PaymentOccurrence {
+  id        String   @id @default(uuid())
+  paymentId String
+  dueDate   DateTime
+  status    String   @default("paid")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  payment   Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 }
 
 model Investment {

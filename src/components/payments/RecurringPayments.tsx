@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Payment } from '@/types'
-import { formatCurrency, formatDate, getFrequencyLabel } from '@/lib/formatters'
+import { formatCurrency, formatDate, getFrequencyLabel, generateRecurringDates } from '@/lib/formatters'
 import { Repeat } from 'lucide-react'
 
 interface RecurringPaymentsProps {
@@ -73,7 +73,17 @@ export function RecurringPayments({ payments, loading }: RecurringPaymentsProps)
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Próximo vencimento: {formatDate(payment.dueDate)}
+                  Próximo vencimento: {(() => {
+                    const dates = generateRecurringDates(payment.dueDate, payment.frequency, payment.recurrenceEndDate || null, 12)
+                    const today = new Date()
+                    const next = dates.find(d => new Date(d) >= new Date(today)) || dates[dates.length - 1]
+                    if (!next) return formatDate(payment.dueDate)
+                    const occ = (payment.occurrences || []).find((o: any) => {
+                      const od = new Date(o.dueDate)
+                      return od.getFullYear() === next.getFullYear() && od.getMonth() === next.getMonth() && od.getDate() === next.getDate()
+                    })
+                    return occ ? formatDate(occ.dueDate) : formatDate(next)
+                  })()}
                 </p>
               </div>
 

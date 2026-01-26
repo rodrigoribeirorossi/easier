@@ -24,6 +24,8 @@ export function TransactionForm({ open, onOpenChange, transaction, accounts, cat
     accountId: '',
     categoryId: '',
     isRecurring: false,
+    frequency: 'monthly',
+    recurrenceEndDate: '',
   })
   const [loading, setLoading] = useState(false)
 
@@ -37,6 +39,8 @@ export function TransactionForm({ open, onOpenChange, transaction, accounts, cat
         accountId: transaction.accountId,
         categoryId: transaction.categoryId,
         isRecurring: transaction.isRecurring,
+        frequency: transaction.frequency || 'monthly',
+        recurrenceEndDate: transaction.recurrenceEndDate ? new Date(transaction.recurrenceEndDate).toISOString().split('T')[0] : '',
       })
     } else {
       setFormData({
@@ -47,6 +51,8 @@ export function TransactionForm({ open, onOpenChange, transaction, accounts, cat
         accountId: accounts[0]?.id || '',
         categoryId: '',
         isRecurring: false,
+        frequency: 'monthly',
+        recurrenceEndDate: '',
       })
     }
   }, [transaction, accounts, open])
@@ -59,6 +65,7 @@ export function TransactionForm({ open, onOpenChange, transaction, accounts, cat
       await onSubmit({
         ...formData,
         amount: parseFloat(formData.amount),
+        recurrenceEndDate: formData.recurrenceEndDate || null,
       })
       onOpenChange(false)
     } catch (error) {
@@ -145,6 +152,48 @@ export function TransactionForm({ open, onOpenChange, transaction, accounts, cat
               </SelectContent>
             </Select>
           </div>
+
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="isRecurring"
+              checked={formData.isRecurring}
+              onChange={(e) => setFormData({ ...formData, isRecurring: e.target.checked })}
+              className="h-4 w-4"
+            />
+            <Label htmlFor="isRecurring" className="cursor-pointer">
+              Recorrente
+            </Label>
+          </div>
+
+          {formData.isRecurring && (
+            <div className="space-y-2">
+              <Label htmlFor="frequency">Frequência</Label>
+              <Select value={formData.frequency} onValueChange={(value) => setFormData({ ...formData, frequency: value })}>
+                <SelectTrigger id="frequency">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="weekly">Semanal</SelectItem>
+                  <SelectItem value="monthly">Mensal</SelectItem>
+                  <SelectItem value="yearly">Anual</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {formData.isRecurring && (
+            <div className="space-y-2">
+              <Label htmlFor="recurrenceEndDate">Data de Fim</Label>
+              <Input
+                id="recurrenceEndDate"
+                type="date"
+                value={formData.recurrenceEndDate}
+                onChange={(e) => setFormData({ ...formData, recurrenceEndDate: e.target.value })}
+                aria-label="Data de fim da recorrência"
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="category">Categoria</Label>

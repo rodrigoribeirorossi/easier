@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import React from 'react'
+import { IncomeList as Income } from './components/incomes/IncomeList'
 import { Layout } from './components/layout/Layout'
 import { Dashboard } from './components/dashboard/Dashboard'
 import { TransactionList } from './components/transactions/TransactionList'
@@ -16,6 +18,7 @@ function App() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="transactions" element={<TransactionList />} />
+          <Route path="incomes" element={<Income />} />
           <Route path="accounts" element={<AccountList />} />
           <Route path="calendar" element={<FinancialCalendar />} />
           <Route path="payments" element={<PaymentList />} />

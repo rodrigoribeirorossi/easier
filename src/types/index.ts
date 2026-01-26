@@ -6,6 +6,7 @@ export interface User {
   role: 'admin' | 'member'
   createdAt: Date
   updatedAt: Date
+  occurrences?: PaymentOccurrence[]
 }
 
 export interface Account {
@@ -38,6 +39,8 @@ export interface Transaction {
   description: string
   date: Date
   isRecurring: boolean
+  recurrenceEndDate?: Date | null
+  frequency?: 'monthly' | 'weekly' | 'yearly'
   tags?: string[]
   accountId: string
   categoryId: string
@@ -55,12 +58,25 @@ export interface Payment {
   dueDate: Date
   isRecurring: boolean
   frequency?: 'monthly' | 'weekly' | 'yearly'
+  /** Optional end date for recurrence (if payment is recurring) */
+  recurrenceEndDate?: Date | null
   status: 'pending' | 'paid' | 'overdue'
   categoryId: string
   accountId?: string
   userId: string
   category?: Category
   account?: Account
+  /** If the backend stores explicit occurrence records for this recurring payment */
+  occurrences?: PaymentOccurrence[]
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface PaymentOccurrence {
+  id: string
+  paymentId: string
+  dueDate: Date
+  status: 'pending' | 'paid' | 'overdue'
   createdAt: Date
   updatedAt: Date
 }

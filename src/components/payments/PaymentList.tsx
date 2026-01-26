@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import useUser from '@/hooks/useUser'
 import { api } from '@/lib/api'
 import { Payment, Account, Category } from '@/types'
-import { formatCurrency, formatDate, getPaymentStatusLabel } from '@/lib/formatters'
+import { expandRecurringPaymentOccurrences, formatCurrency, formatDate, getPaymentStatusLabel, parseAsLocalDate } from '@/lib/formatters'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -41,7 +41,20 @@ export function PaymentList() {
         api.getAccounts(),
         api.getCategories('expense'),
       ])
-      setPayments(pmts)
+      // Expand recurring payments into occurrences (up to 12 months) so each month can be managed separately
+      const expanded: any[] = []
+      pmts.forEach((p: any) => {
+        if (p.isRecurring) {
+          const occ = expandRecurringPaymentOccurrences(p, 12)
+          expanded.push(...occ)
+        } else {
+          expanded.push(p)
+        }
+      })
+
+      // sort by due date (parse as local to avoid UTC shift)
+      expanded.sort((a, b) => parseAsLocalDate(a.dueDate).getTime() - parseAsLocalDate(b.dueDate).getTime())
+      setPayments(expanded)
       setAccounts(accs)
       setCategories(cats)
     } catch (error) {
@@ -53,7 +66,9 @@ export function PaymentList() {
 
   async function handleSubmit(data: any) {
     if (selectedPayment) {
-      await api.updatePayment(selectedPayment.id, data)
+      // ensure we update the base payment when editing an occurrence
+      const baseId = selectedPayment.id.includes('::') ? selectedPayment.id.split('::')[0] : selectedPayment.id
+      await api.updatePayment(baseId, data)
     } else {
       await api.createPayment(data)
     }
@@ -61,14 +76,30 @@ export function PaymentList() {
   }
 
   async function handleDelete(id: string) {
-    if (confirm('Tem certeza que deseja excluir este pagamento?')) {
+    if (!confirm('Tem certeza que deseja excluir este pagamento?')) return
+
+    // if an occurrence id, delete occurrence; otherwise delete base payment
+    if (id.includes('::')) {
+      const parts = id.split('::')
+      const baseId = parts[0]
+      const occId = parts[1]
+      await api.deletePaymentOccurrence(baseId, occId)
+    } else {
       await api.deletePayment(id)
-      loadData()
     }
+    loadData()
   }
 
   async function handleMarkAsPaid(payment: Payment) {
-    await api.updatePayment(payment.id, { ...payment, status: 'paid' })
+    // If this is an expanded occurrence (id contains ::), create an occurrence record
+    if (payment.id.includes('::')) {
+      const parts = payment.id.split('::')
+      const baseId = parts[0]
+      const dateIso = parts[1]
+      await api.createPaymentOccurrence(baseId, { dueDate: dateIso, status: 'paid' })
+    } else {
+      await api.updatePayment(payment.id, { ...payment, status: 'paid' })
+    }
     loadData()
   }
 
@@ -186,7 +217,17 @@ export function PaymentList() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => { setSelectedPayment(payment); setDialogOpen(true); }}
+                            onClick={async () => {
+                              // when editing an occurrence, load base payment into the form
+                              if (payment.id.includes('::')) {
+                                const baseId = payment.id.split('::')[0]
+                                const base = await api.getPayment(baseId)
+                                setSelectedPayment(base)
+                              } else {
+                                setSelectedPayment(payment)
+                              }
+                              setDialogOpen(true)
+                            }}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>

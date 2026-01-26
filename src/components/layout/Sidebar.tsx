@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button'
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Transações', href: '/transactions', icon: ArrowLeftRight },
+  { name: 'Entradas', href: '/incomes', icon: TrendingUp },
   { name: 'Contas', href: '/accounts', icon: Wallet },
   { name: 'Calendário', href: '/calendar', icon: Calendar },
   { name: 'Pagamentos', href: '/payments', icon: CreditCard },

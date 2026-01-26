@@ -41,6 +41,7 @@ router.get('/', async (req: Request, res: Response) => {
             avatar: true,
           },
         },
+        occurrences: true,
       },
       orderBy,
     });
@@ -69,6 +70,7 @@ router.get('/:id', async (req: Request, res: Response) => {
             avatar: true,
           },
         },
+        occurrences: true,
       },
     });
 
@@ -101,6 +103,7 @@ router.post('/', async (req: Request, res: Response) => {
         name: String(name),
         amount: parseFloat(String(amount)),
         dueDate: new Date(dueDate),
+        recurrenceEndDate: req.body.recurrenceEndDate ? new Date(req.body.recurrenceEndDate) : null,
         isRecurring: isRecurring || false,
         frequency: frequency ? String(frequency) : null,
         status: status ? String(status) : 'pending',
@@ -119,6 +122,7 @@ router.post('/', async (req: Request, res: Response) => {
             avatar: true,
           },
         },
+        occurrences: true,
       },
     });
 
@@ -154,6 +158,7 @@ router.put('/:id', async (req: Request, res: Response) => {
         ...(name && { name: String(name) }),
         ...(amount !== undefined && { amount: parseFloat(String(amount)) }),
         ...(dueDate && { dueDate: new Date(dueDate) }),
+        ...(req.body.recurrenceEndDate !== undefined && { recurrenceEndDate: req.body.recurrenceEndDate ? new Date(req.body.recurrenceEndDate) : null }),
         ...(isRecurring !== undefined && { isRecurring }),
         ...(frequency !== undefined && { frequency: frequency ? String(frequency) : null }),
         ...(status && { status: String(status) }),
@@ -171,6 +176,7 @@ router.put('/:id', async (req: Request, res: Response) => {
             avatar: true,
           },
         },
+        occurrences: true,
       },
     });
 
@@ -180,6 +186,53 @@ router.put('/:id', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to update payment' });
   }
 });
+
+// Create an occurrence (mark a specific occurrence as paid or record it)
+router.post('/:id/occurrences', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const { dueDate, status } = req.body;
+
+    if (!dueDate) return res.status(400).json({ error: 'Missing dueDate for occurrence' })
+
+    const existingPayment = await prisma.payment.findUnique({ where: { id } })
+    if (!existingPayment) return res.status(404).json({ error: 'Payment not found' })
+
+    const occurrence = await prisma.paymentOccurrence.create({
+      data: {
+        paymentId: id,
+        dueDate: new Date(dueDate),
+        status: status ? String(status) : 'paid',
+      },
+    })
+
+    res.status(201).json(occurrence)
+  } catch (error) {
+    console.error('Error creating occurrence:', error)
+    res.status(500).json({ error: 'Failed to create occurrence' })
+  }
+})
+
+  // Delete an occurrence
+  router.delete('/:id/occurrences/:occurrenceId', async (req: Request, res: Response) => {
+    try {
+      const occurrenceId = req.params.occurrenceId as string
+
+      const occ = await prisma.paymentOccurrence.findUnique({ where: { id: occurrenceId } })
+      if (!occ) return res.status(404).json({ error: 'Occurrence not found' })
+
+      // ensure owner
+      const payment = await prisma.payment.findUnique({ where: { id: occ.paymentId } })
+      const userIdFromHeader = (req.headers['x-user-id'] as string) || undefined
+      if (payment && userIdFromHeader && payment.userId !== userIdFromHeader) return res.status(403).json({ error: 'Forbidden' })
+
+      await prisma.paymentOccurrence.delete({ where: { id: occurrenceId } })
+      res.status(204).send()
+    } catch (error) {
+      console.error('Error deleting occurrence:', error)
+      res.status(500).json({ error: 'Failed to delete occurrence' })
+    }
+  })
 
 router.delete('/:id', async (req: Request, res: Response) => {
   try {

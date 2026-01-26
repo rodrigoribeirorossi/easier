@@ -88,7 +88,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { type, amount, description, date, isRecurring, tags, accountId, categoryId, userId } = req.body;
+    const { type, amount, description, date, isRecurring, recurrenceEndDate, frequency, tags, accountId, categoryId, userId } = req.body;
 
     const userIdFromHeader = (req.headers['x-user-id'] as string) || undefined
     const uid = userId || userIdFromHeader
@@ -104,6 +104,8 @@ router.post('/', async (req: Request, res: Response) => {
           amount: parseFloat(String(amount)),
           description: String(description),
           date: new Date(date),
+          recurrenceEndDate: recurrenceEndDate ? new Date(recurrenceEndDate) : null,
+          frequency: frequency ? String(frequency) : null,
           isRecurring: isRecurring || false,
           tags: tags ? JSON.stringify(tags) : null,
           accountId: String(accountId),
@@ -146,7 +148,7 @@ router.post('/', async (req: Request, res: Response) => {
 router.put('/:id', async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
-    const { type, amount, description, date, isRecurring, tags, accountId, categoryId } = req.body;
+    const { type, amount, description, date, isRecurring, recurrenceEndDate, frequency, tags, accountId, categoryId } = req.body;
 
     const existingTransaction = await prisma.transaction.findUnique({
       where: { id },
@@ -182,6 +184,8 @@ router.put('/:id', async (req: Request, res: Response) => {
           ...(amount !== undefined && { amount: parseFloat(String(amount)) }),
           ...(description && { description: String(description) }),
           ...(date && { date: new Date(date) }),
+          ...(recurrenceEndDate !== undefined && { recurrenceEndDate: recurrenceEndDate ? new Date(recurrenceEndDate) : null }),
+          ...(frequency !== undefined && { frequency: frequency ? String(frequency) : null }),
           ...(isRecurring !== undefined && { isRecurring }),
           ...(tags && { tags: JSON.stringify(tags) }),
           ...(accountId && { accountId: String(accountId) }),
