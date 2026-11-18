@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
+import { api } from '@/lib/api'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { Trash2 } from 'lucide-react'
 import { Payment, Account, Category } from '@/types'
 
 interface PaymentFormProps {
@@ -13,9 +15,10 @@ interface PaymentFormProps {
   accounts: Account[]
   categories: Category[]
   onSubmit: (data: any) => Promise<void>
+  onDelete?: (id: string) => Promise<void>
 }
 
-export function PaymentForm({ open, onOpenChange, payment, accounts, categories, onSubmit }: PaymentFormProps) {
+export function PaymentForm({ open, onOpenChange, payment, accounts, categories, onSubmit, onDelete }: PaymentFormProps) {
   const [formData, setFormData] = useState({
     name: '',
     amount: '',
@@ -29,6 +32,19 @@ export function PaymentForm({ open, onOpenChange, payment, accounts, categories,
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [localCategories, setLocalCategories] = useState<Category[]>(categories || [])
+  const [creatingCategory, setCreatingCategory] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [showNewCategory, setShowNewCategory] = useState(false)
+
+  const dedupeCategories = (list: Category[]) => {
+    const byKey = new Map<string, Category>()
+    for (const item of list || []) {
+      const key = `${item.type}:${String(item.name || '').trim().toLowerCase()}`
+      if (!byKey.has(key)) byKey.set(key, item)
+    }
+    return Array.from(byKey.values())
+  }
 
   useEffect(() => {
     if (payment) {
@@ -56,6 +72,21 @@ export function PaymentForm({ open, onOpenChange, payment, accounts, categories,
         recurrenceEndDate: '',
       })
     }
+    const initCats = async () => {
+      if (!categories || (categories && categories.length === 0)) {
+        try {
+          const fetched = await api.getCategories('expense')
+          const list = Array.isArray(fetched) ? fetched : []
+          setLocalCategories(dedupeCategories(list))
+        } catch (err) {
+          console.error('Failed to fetch categories in PaymentForm:', err)
+          setLocalCategories(dedupeCategories(Array.isArray(categories) ? categories : []))
+        }
+      } else {
+        setLocalCategories(dedupeCategories(Array.isArray(categories) ? categories : []))
+      }
+    }
+    initCats()
   }, [payment, accounts, categories, open])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,6 +110,24 @@ export function PaymentForm({ open, onOpenChange, payment, accounts, categories,
       }
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleCreateCategory() {
+    if (!newCategoryName.trim()) return
+    setCreatingCategory(true)
+    try {
+      const created = await api.createCategory({ name: newCategoryName.trim(), type: 'expense' })
+      const updated = [...(localCategories || []), created]
+      setLocalCategories(dedupeCategories(updated))
+      setFormData({ ...formData, categoryId: created.id })
+      setNewCategoryName('')
+      setShowNewCategory(false)
+    } catch (err) {
+      console.error('Failed to create category:', err)
+      setError((err as Error).message || 'Erro ao criar categoria')
+    } finally {
+      setCreatingCategory(false)
     }
   }
 
@@ -187,18 +236,35 @@ export function PaymentForm({ open, onOpenChange, payment, accounts, categories,
 
           <div className="space-y-2">
             <Label htmlFor="category">Categoria</Label>
-            <Select value={formData.categoryId} onValueChange={(value) => setFormData({ ...formData, categoryId: value })}>
-              <SelectTrigger id="category">
-                <SelectValue placeholder="Selecione uma categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map(category => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <Select value={formData.categoryId} onValueChange={(value) => setFormData({ ...formData, categoryId: value })}>
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="Selecione uma categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(localCategories || []).map(category => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                {!showNewCategory ? (
+                  <Button variant="outline" onClick={() => { setShowNewCategory(true); setNewCategoryName('') }}>Nova</Button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Input value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} placeholder="Nova categoria" />
+                    <Button onClick={handleCreateCategory} disabled={creatingCategory || !newCategoryName.trim()}>
+                      {creatingCategory ? 'Criando...' : 'Criar'}
+                    </Button>
+                    <Button variant="ghost" onClick={() => { setShowNewCategory(false); setNewCategoryName('') }}>Cancelar</Button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -218,6 +284,22 @@ export function PaymentForm({ open, onOpenChange, payment, accounts, categories,
           </div>
 
           <DialogFooter>
+            {payment && onDelete && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="mr-auto text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={async () => {
+                  if (!confirm('Tem certeza que deseja excluir este pagamento?')) return
+                  const baseId = payment.id.includes('::') ? payment.id.split('::')[0] : payment.id
+                  await onDelete(baseId)
+                  onOpenChange(false)
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir
+              </Button>
+            )}
             {error && <div className="text-sm text-red-500 mr-auto">{error}</div>}
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar

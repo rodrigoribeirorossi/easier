@@ -1,18 +1,18 @@
 import { formatCurrency } from '@/lib/formatters'
-import { Plus } from 'lucide-react'
+import { Plus, CheckCircle2, Clock, AlertCircle, Landmark, HandCoins } from 'lucide-react'
 
 interface PaymentEventProps {
   payment: any
   onClick?: () => void
 }
 
-export function PaymentEvent({ payment, onClick }: PaymentEventProps) {
-  const statusColors = {
-    pending: 'bg-yellow-500',
-    paid: 'bg-green-500',
-    overdue: 'bg-red-500',
-  }
+const STATUS_CONFIG = {
+  paid:    { icon: CheckCircle2, color: 'text-green-500',  label: 'Pago'      },
+  pending: { icon: Clock,        color: 'text-amber-500',  label: 'Pendente'  },
+  overdue: { icon: AlertCircle,  color: 'text-red-500',    label: 'Atrasado'  },
+} as const
 
+export function PaymentEvent({ payment, onClick }: PaymentEventProps) {
   // Use explicit style by item type: detect income via several possible fields
   const isIncome = Boolean(
     payment && (
@@ -22,14 +22,19 @@ export function PaymentEvent({ payment, onClick }: PaymentEventProps) {
     )
   )
 
+  const isDebt = Boolean(payment && (payment._type === 'debt' || payment.type === 'debt'))
+
   const cleanName = (name: any) => {
     try {
-      // remove leading plus signs, fullwidth plus, nbsp and surrounding spaces
       return String(name).replace(/^[\s\+\uFF0B\u00A0]+/, '')
     } catch {
       return name
     }
   }
+
+  const status = payment?.status as keyof typeof STATUS_CONFIG
+  const statusCfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.pending
+  const StatusIcon = statusCfg.icon
 
   return (
     <button
@@ -41,16 +46,23 @@ export function PaymentEvent({ payment, onClick }: PaymentEventProps) {
           <div className="h-4 w-4 flex items-center justify-center flex-shrink-0">
             <Plus className="h-3 w-3 text-green-500" />
           </div>
+        ) : isDebt ? (
+          <div className="h-4 w-4 flex items-center justify-center flex-shrink-0" title={payment._debt?.type === 'loan' ? 'Empréstimo' : 'Financiamento'}>
+            {payment._debt?.type === 'loan'
+              ? <HandCoins className="h-3 w-3 text-orange-500" />
+              : <Landmark className="h-3 w-3 text-blue-500" />
+            }
+          </div>
         ) : (
-          <div className="h-4 w-4 flex items-center justify-center flex-shrink-0">
-            <div className="h-2.5 w-2.5 rounded-full bg-orange-500" />
+          <div className="h-4 w-4 flex items-center justify-center flex-shrink-0" title={statusCfg.label}>
+            <StatusIcon className={`h-3 w-3 ${statusCfg.color}`} />
           </div>
         )}
         <span className="text-xs truncate group-hover:text-foreground">
           {isIncome ? cleanName(payment.name) : payment.name}
         </span>
       </div>
-      <p className={`text-xs mt-0.5 ${isIncome ? 'text-green-600 font-medium' : 'text-muted-foreground'}`}>
+      <p className={`text-xs mt-0.5 ${isIncome ? 'text-green-600 font-medium' : isDebt ? (payment._debt?.type === 'loan' ? 'text-orange-500 font-medium' : 'text-blue-600 font-medium') : 'text-muted-foreground'}`}>
         {formatCurrency(payment.amount)}
       </p>
     </button>

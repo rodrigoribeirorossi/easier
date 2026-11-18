@@ -37,7 +37,7 @@ export function TransactionList() {
       return
     }
     loadData()
-  }, [user && user.id, filters])
+  }, [user?.id, filters])
 
   async function loadData() {
     try {

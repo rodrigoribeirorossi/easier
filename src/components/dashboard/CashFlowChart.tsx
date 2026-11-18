@@ -27,14 +27,22 @@ export function CashFlowChart({ data, loading }: CashFlowChartProps) {
     )
   }
 
+  // compute Y axis max (ensure at least 14k) and ticks
+  const rawMax = data && data.length ? Math.max(...data.map(d => Math.max(d.income || 0, d.expense || 0))) : 0
+  const minMax = Math.max(14000, Math.ceil(rawMax / 1000) * 1000)
+  const step = Math.max(1000, Math.ceil(minMax / 7 / 1000) * 1000)
+  const ticks: number[] = []
+  for (let v = 0; v <= minMax; v += step) ticks.push(v)
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Fluxo de Caixa</CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={320}>
-          <AreaChart data={data}>
+        <div style={{ width: '100%', height: 560 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data} margin={{ top: 12, right: 20, left: 0, bottom: 140 }}>
             <defs>
               <linearGradient id="income" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
@@ -46,15 +54,31 @@ export function CashFlowChart({ data, loading }: CashFlowChartProps) {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-            <XAxis 
-              dataKey="month" 
+            <XAxis
+              dataKey="month"
               className="text-xs"
-              tick={{ fill: 'hsl(var(--muted-foreground))' }}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+              angle={-45}
+              textAnchor="end"
+              height={60}
+              interval={0}
             />
-            <YAxis 
+            <YAxis
               className="text-xs"
-              tick={{ fill: 'hsl(var(--muted-foreground))' }}
-              tickFormatter={(value: number | undefined) => value !== undefined ? formatCurrency(value) : ''}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+              tickMargin={8}
+              domain={[0, minMax]}
+              ticks={ticks}
+              tickFormatter={(value: number | undefined) => {
+                if (value === undefined || value === null) return ''
+                const abs = Math.abs(value)
+                if (abs >= 1000) {
+                  const v = value / 1000
+                  const formatted = v % 1 === 0 ? String(v) : v.toFixed(1)
+                  return `${formatted}k`
+                }
+                return formatCurrency(value)
+              }}
             />
             <Tooltip
               contentStyle={{
@@ -82,7 +106,8 @@ export function CashFlowChart({ data, loading }: CashFlowChartProps) {
               name="Despesas"
             />
           </AreaChart>
-        </ResponsiveContainer>
+          </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   )

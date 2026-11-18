@@ -1,16 +1,22 @@
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Payment } from '@/types'
 import { formatCurrency, formatDate, getFrequencyLabel, generateRecurringDates } from '@/lib/formatters'
-import { Repeat } from 'lucide-react'
+import { Repeat, CheckCircle, Edit, Trash2 } from 'lucide-react'
 
 interface RecurringPaymentsProps {
   payments: Payment[]
   loading?: boolean
+  onEdit?: (payment: Payment) => void
+  onDelete?: (id: string) => void
+  onMarkAsPaid?: (payment: Payment) => void
 }
 
-export function RecurringPayments({ payments, loading }: RecurringPaymentsProps) {
+export function RecurringPayments({ payments, loading, onEdit, onDelete, onMarkAsPaid }: RecurringPaymentsProps) {
   const recurringPayments = payments.filter(p => p.isRecurring)
+  const [showAll, setShowAll] = useState(false)
 
   if (loading) {
     return (
@@ -49,6 +55,7 @@ export function RecurringPayments({ payments, loading }: RecurringPaymentsProps)
       </Card>
     )
   }
+  const displayed = showAll ? recurringPayments : recurringPayments.slice(0, 5)
 
   return (
     <Card>
@@ -57,7 +64,7 @@ export function RecurringPayments({ payments, loading }: RecurringPaymentsProps)
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {recurringPayments.map((payment) => (
+          {displayed.map((payment) => (
             <div key={payment.id} className="flex items-center gap-4 p-4 border border-border rounded-lg">
               <div className="p-2 rounded-full bg-blue-50 dark:bg-blue-950">
                 <Repeat className="h-5 w-5 text-blue-600" />
@@ -87,11 +94,51 @@ export function RecurringPayments({ payments, loading }: RecurringPaymentsProps)
                 </p>
               </div>
 
-              <div className="text-right">
+              <div className="text-right flex items-center gap-2">
                 <p className="font-semibold">{formatCurrency(payment.amount)}</p>
+                <div className="flex gap-1">
+                  {onMarkAsPaid && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onMarkAsPaid(payment)}
+                      title="Marcar como pago"
+                    >
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    </Button>
+                  )}
+                  {onEdit && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onEdit(payment)}
+                      title="Editar"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {onDelete && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDelete(payment.id)}
+                      title="Excluir"
+                    >
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
+
+          {recurringPayments.length > 5 && (
+            <div className="mt-3 flex justify-center">
+              <Button variant="ghost" onClick={() => setShowAll(!showAll)}>
+                {showAll ? 'Mostrar menos' : 'Mostrar todos'}
+              </Button>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

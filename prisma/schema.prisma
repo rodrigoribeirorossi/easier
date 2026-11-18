@@ -20,6 +20,7 @@ model User {
   investments  Investment[]
   payments     Payment[]
   transactions Transaction[]
+  debts        Debt[]
 }
 
 model Account {
@@ -114,4 +115,27 @@ model Investment {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Debt {
+  id                 String    @id @default(uuid())
+  name               String
+  type               String    // "financing" | "loan"
+  totalAmount        Float
+  remainingAmount    Float
+  installmentAmount  Float
+  totalInstallments  Int
+  paidInstallments   Int       @default(0)
+  interestRate       Float     @default(0)
+  startDate          DateTime
+  endDate            DateTime
+  settlementAmount   Float?
+  description        String?
+  creditor           String?
+  status             String    @default("active") // "active" | "settled"
+  settledAt          DateTime?
+  userId             String
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

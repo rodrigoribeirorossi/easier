@@ -19,6 +19,7 @@ export function PaymentList() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
   const [activeTab, setActiveTab] = useState('all')
+  const [showAllPayments, setShowAllPayments] = useState(false)
 
   const { user } = useUser()
 
@@ -31,7 +32,7 @@ export function PaymentList() {
       return
     }
     loadData()
-  }, [user && user.id])
+  }, [user?.id])
 
   async function loadData() {
     try {
@@ -56,7 +57,23 @@ export function PaymentList() {
       expanded.sort((a, b) => parseAsLocalDate(a.dueDate).getTime() - parseAsLocalDate(b.dueDate).getTime())
       setPayments(expanded)
       setAccounts(accs)
-      setCategories(cats)
+      // dedupe categories by id first, then by name to avoid repeated labels
+      const catsArr = Array.isArray(cats) ? cats : []
+      const seen = new Set<string>()
+      const unique: any[] = []
+      for (const c of catsArr) {
+        const key = c.id || c.name
+        if (!seen.has(key)) {
+          seen.add(key)
+          unique.push(c)
+        }
+      }
+      // also ensure unique names (in case same name different ids)
+      const byName = new Map<string, any>()
+      for (const c of unique) {
+        if (!byName.has(c.name)) byName.set(c.name, c)
+      }
+      setCategories(Array.from(byName.values()))
     } catch (error) {
       console.error('Failed to load payments:', error)
     } finally {
@@ -75,10 +92,8 @@ export function PaymentList() {
     loadData()
   }
 
-  async function handleDelete(id: string) {
+  async function handleDeletePayment(id: string) {
     if (!confirm('Tem certeza que deseja excluir este pagamento?')) return
-
-    // if an occurrence id, delete occurrence; otherwise delete base payment
     if (id.includes('::')) {
       const parts = id.split('::')
       const baseId = parts[0]
@@ -88,6 +103,17 @@ export function PaymentList() {
       await api.deletePayment(id)
     }
     loadData()
+  }
+
+  async function handleEditPayment(payment: Payment) {
+    if (payment.id.includes('::')) {
+      const baseId = payment.id.split('::')[0]
+      const base = await api.getPayment(baseId)
+      setSelectedPayment(base)
+    } else {
+      setSelectedPayment(payment)
+    }
+    setDialogOpen(true)
   }
 
   async function handleMarkAsPaid(payment: Payment) {
@@ -117,6 +143,7 @@ export function PaymentList() {
   }
 
   const filteredPayments = getFilteredPayments()
+  const displayedPayments = showAllPayments ? filteredPayments : filteredPayments.slice(0, 5)
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -139,7 +166,13 @@ export function PaymentList() {
         </Button>
       </div>
 
-      <RecurringPayments payments={payments} loading={loading} />
+      <RecurringPayments
+        payments={payments}
+        loading={loading}
+        onEdit={handleEditPayment}
+        onDelete={handleDeletePayment}
+        onMarkAsPaid={handleMarkAsPaid}
+      />
 
       <Card>
         <CardHeader>
@@ -173,7 +206,7 @@ export function PaymentList() {
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {filteredPayments.map((payment) => (
+                  {displayedPayments.map((payment) => (
                     <div
                       key={payment.id}
                       className="flex items-center gap-4 p-4 border border-border rounded-lg hover:bg-accent transition-colors"
@@ -217,24 +250,14 @@ export function PaymentList() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={async () => {
-                              // when editing an occurrence, load base payment into the form
-                              if (payment.id.includes('::')) {
-                                const baseId = payment.id.split('::')[0]
-                                const base = await api.getPayment(baseId)
-                                setSelectedPayment(base)
-                              } else {
-                                setSelectedPayment(payment)
-                              }
-                              setDialogOpen(true)
-                            }}
+                            onClick={() => handleEditPayment(payment)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleDelete(payment.id)}
+                            onClick={() => handleDeletePayment(payment.id)}
                           >
                             <Trash2 className="h-4 w-4 text-red-600" />
                           </Button>
@@ -242,6 +265,15 @@ export function PaymentList() {
                       </div>
                     </div>
                   ))}
+
+                  {filteredPayments.length > 5 && (
+                    <div className="flex justify-center mt-4">
+                      <Button variant="ghost" onClick={() => setShowAllPayments(!showAllPayments)}>
+                        {showAllPayments ? 'Mostrar menos' : 'Mostrar todos'}
+                      </Button>
+                    </div>
+                  )}
+
                 </div>
               )}
             </TabsContent>
@@ -256,6 +288,7 @@ export function PaymentList() {
         accounts={accounts}
         categories={categories}
         onSubmit={handleSubmit}
+        onDelete={async (id) => { await api.deletePayment(id); loadData() }}
       />
     </div>
   )

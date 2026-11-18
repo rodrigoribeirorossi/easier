@@ -22,6 +22,7 @@ const navigation = [
   { name: 'Calendário', href: '/calendar', icon: Calendar },
   { name: 'Pagamentos', href: '/payments', icon: CreditCard },
   { name: 'Investimentos', href: '/investments', icon: TrendingUp },
+  { name: 'Dívidas', href: '/debts', icon: CreditCard },
   { name: 'Relatórios', href: '/reports', icon: BarChart3 },
 ]
 
@@ -52,11 +53,12 @@ export function Sidebar() {
       <aside className={cn(
         "fixed top-0 left-0 h-screen w-64 bg-card border-r border-border transition-transform duration-200 z-40",
         "md:translate-x-0",
+        "dark:border-white/80 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.9)]",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="p-6 border-b border-border">
+          <div className="p-6 border-b border-border dark:border-white/80">
             <h1 className="text-2xl font-bold text-primary">easier</h1>
             <p className="text-sm text-muted-foreground">Controle Financeiro</p>
           </div>

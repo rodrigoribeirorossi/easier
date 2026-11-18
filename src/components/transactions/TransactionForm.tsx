@@ -5,6 +5,8 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Transaction, Account, Category } from '@/types'
+import { api } from '@/lib/api'
+import { Plus, Check, X } from 'lucide-react'
 
 interface TransactionFormProps {
   open: boolean
@@ -28,6 +30,15 @@ export function TransactionForm({ open, onOpenChange, transaction, accounts, cat
     recurrenceEndDate: '',
   })
   const [loading, setLoading] = useState(false)
+  const [localCategories, setLocalCategories] = useState<Category[]>(categories)
+  const [showNewCategory, setShowNewCategory] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [savingCategory, setSavingCategory] = useState(false)
+
+  // Sync localCategories when prop changes
+  useEffect(() => {
+    setLocalCategories(categories)
+  }, [categories])
 
   useEffect(() => {
     if (transaction) {
@@ -55,6 +66,8 @@ export function TransactionForm({ open, onOpenChange, transaction, accounts, cat
         recurrenceEndDate: '',
       })
     }
+    setShowNewCategory(false)
+    setNewCategoryName('')
   }, [transaction, accounts, open])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,7 +88,27 @@ export function TransactionForm({ open, onOpenChange, transaction, accounts, cat
     }
   }
 
-  const filteredCategories = categories.filter(c => c.type === formData.type || formData.type === 'transfer')
+  // Filter by type and deduplicate by name (keep first occurrence)
+  const filteredCategories = localCategories
+    .filter(c => c.type === formData.type || formData.type === 'transfer')
+    .filter((c, index, self) => self.findIndex(cat => cat.name === c.name) === index)
+
+  async function handleCreateCategory() {
+    if (!newCategoryName.trim()) return
+    setSavingCategory(true)
+    try {
+      const type = formData.type === 'transfer' ? 'expense' : formData.type
+      const created: Category = await api.createCategory({ name: newCategoryName.trim(), type })
+      setLocalCategories(prev => [...prev, created])
+      setFormData(prev => ({ ...prev, categoryId: created.id }))
+      setShowNewCategory(false)
+      setNewCategoryName('')
+    } catch (e) {
+      console.error('Failed to create category:', e)
+    } finally {
+      setSavingCategory(false)
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -196,7 +229,39 @@ export function TransactionForm({ open, onOpenChange, transaction, accounts, cat
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="category">Categoria</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="category">Categoria</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => { setShowNewCategory(v => !v); setNewCategoryName('') }}
+                title="Nova categoria"
+              >
+                <Plus className="h-4 w-4 text-primary" />
+              </Button>
+            </div>
+
+            {showNewCategory && (
+              <div className="flex items-center gap-2">
+                <Input
+                  autoFocus
+                  placeholder="Nome da nova categoria"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCreateCategory() } }}
+                  disabled={savingCategory}
+                />
+                <Button type="button" size="icon" variant="ghost" onClick={handleCreateCategory} disabled={savingCategory || !newCategoryName.trim()}>
+                  <Check className="h-4 w-4 text-green-600" />
+                </Button>
+                <Button type="button" size="icon" variant="ghost" onClick={() => { setShowNewCategory(false); setNewCategoryName('') }}>
+                  <X className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </div>
+            )}
+
             <Select value={formData.categoryId} onValueChange={(value) => setFormData({ ...formData, categoryId: value })}>
               <SelectTrigger id="category">
                 <SelectValue placeholder="Selecione uma categoria" />

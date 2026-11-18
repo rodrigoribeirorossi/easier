@@ -5,7 +5,7 @@ import { DashboardSummary, Payment } from '@/types'
 import { SummaryCards } from './SummaryCards'
 import { CashFlowChart } from './CashFlowChart'
 import { UpcomingPayments } from './UpcomingPayments'
-import { parseAsLocalDate } from '@/lib/formatters'
+import { parseAsLocalDate, generateRecurringDates, expandRecurringPaymentOccurrences } from '@/lib/formatters'
 
 interface CashFlowData {
   month: string
@@ -43,7 +43,7 @@ export function Dashboard() {
     }
 
     loadDashboardData()
-  }, [user && user.id])
+  }, [user?.id])
 
   async function loadDashboardData() {
     try {
@@ -52,7 +52,7 @@ export function Dashboard() {
       const [accounts, transactions, payments, investments] = await Promise.all([
         api.getAccounts(),
         api.getTransactions(),
-        api.getPayments({ status: 'pending' }),
+        api.getPayments(),
         api.getInvestments(),
       ])
 
@@ -62,18 +62,52 @@ export function Dashboard() {
       const currentMonth = new Date().getMonth()
       const currentYear = new Date().getFullYear()
 
-      const monthTransactions = transactions.filter((t: any) => {
-        const date = parseAsLocalDate(t.date)
-        return date.getMonth() === currentMonth && date.getFullYear() === currentYear
+      // Expand recurring transactions into occurrences for the year
+      const expandedTransactions: any[] = []
+      transactions.forEach((t: any) => {
+        if (t.isRecurring) {
+          const dates = generateRecurringDates(t.date, t.frequency, t.recurrenceEndDate || null, 12)
+          dates.forEach((d: Date) => {
+            expandedTransactions.push({ ...t, date: d })
+          })
+        } else {
+          expandedTransactions.push(t)
+        }
       })
 
-      const monthIncome = monthTransactions
-        .filter((t: any) => t.type === 'income')
+      // Expand recurring payments into occurrences for the year
+      const expandedPayments: any[] = []
+      payments.forEach((p: any) => {
+        if (p.isRecurring) {
+          const occ = expandRecurringPaymentOccurrences(p, 12)
+          expandedPayments.push(...occ)
+        } else {
+          expandedPayments.push(p)
+        }
+      })
+
+      const monthIncome = expandedTransactions
+        .filter((t: any) => {
+          const d = parseAsLocalDate(t.date)
+          return d.getMonth() === currentMonth && d.getFullYear() === currentYear && t.type === 'income'
+        })
         .reduce((sum: number, t: any) => sum + t.amount, 0)
 
-      const monthExpenses = monthTransactions
-        .filter((t: any) => t.type === 'expense')
+      const monthExpensesFromTx = expandedTransactions
+        .filter((t: any) => {
+          const d = parseAsLocalDate(t.date)
+          return d.getMonth() === currentMonth && d.getFullYear() === currentYear && t.type === 'expense'
+        })
         .reduce((sum: number, t: any) => sum + t.amount, 0)
+
+      const monthExpensesFromPayments = expandedPayments
+        .filter((p: any) => {
+          const d = parseAsLocalDate(p.dueDate)
+          return d.getMonth() === currentMonth && d.getFullYear() === currentYear
+        })
+        .reduce((sum: number, p: any) => sum + p.amount, 0)
+
+      const monthExpenses = monthExpensesFromTx + monthExpensesFromPayments
 
       setSummary({
         totalBalance,
@@ -83,28 +117,44 @@ export function Dashboard() {
         totalInvestments,
       })
 
-      const last6Months = Array.from({ length: 6 }, (_, i) => {
-        const date = new Date()
-        date.setMonth(date.getMonth() - (5 - i))
-        return date
-      })
+      // Build monthly data for all months of the current year (Jan..Dec)
+      const monthsOfYear = Array.from({ length: 12 }, (_, m) => new Date(currentYear, m, 1))
 
-      const flowData = last6Months.map(date => {
-        const monthTxs = transactions.filter((t: any) => {
-          const txDate = parseAsLocalDate(t.date)
-          return txDate.getMonth() === date.getMonth() && txDate.getFullYear() === date.getFullYear()
-        })
+      const flowData = monthsOfYear.map(date => {
+        const monthIndex = date.getMonth()
+
+        const income = expandedTransactions
+          .filter((t: any) => {
+            const d = parseAsLocalDate(t.date)
+            return d.getMonth() === monthIndex && d.getFullYear() === currentYear && t.type === 'income'
+          })
+          .reduce((sum: number, t: any) => sum + t.amount, 0)
+
+        const expenseFromTx = expandedTransactions
+          .filter((t: any) => {
+            const d = parseAsLocalDate(t.date)
+            return d.getMonth() === monthIndex && d.getFullYear() === currentYear && t.type === 'expense'
+          })
+          .reduce((sum: number, t: any) => sum + t.amount, 0)
+
+        const expenseFromPayments = expandedPayments
+          .filter((p: any) => {
+            const d = parseAsLocalDate(p.dueDate)
+            return d.getMonth() === monthIndex && d.getFullYear() === currentYear
+          })
+          .reduce((sum: number, p: any) => sum + p.amount, 0)
 
         return {
           month: date.toLocaleDateString('pt-BR', { month: 'short' }),
-          income: monthTxs.filter((t: any) => t.type === 'income').reduce((sum: number, t: any) => sum + t.amount, 0),
-          expense: monthTxs.filter((t: any) => t.type === 'expense').reduce((sum: number, t: any) => sum + t.amount, 0),
+          income,
+          expense: expenseFromTx + expenseFromPayments,
         }
       })
 
       setCashFlowData(flowData)
 
-      const sortedPayments = payments
+      const sortedPayments = expandedPayments
+        .filter((p: any) => p.status === 'pending')
         .sort((a: any, b: any) => parseAsLocalDate(a.dueDate).getTime() - parseAsLocalDate(b.dueDate).getTime())
         .slice(0, 5)
 

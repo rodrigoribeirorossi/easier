@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from 'recharts'
 import { formatCurrency } from '@/lib/formatters'
+import { Button } from '@/components/ui/button'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface MonthData {
   month: string
@@ -12,9 +14,12 @@ interface MonthData {
 interface MonthlyComparisonProps {
   data: MonthData[]
   loading?: boolean
+  selectedDate?: Date
+  onPrev?: () => void
+  onNext?: () => void
 }
 
-export function MonthlyComparison({ data, loading }: MonthlyComparisonProps) {
+export function MonthlyComparison({ data, loading, selectedDate, onPrev, onNext }: MonthlyComparisonProps) {
   if (loading) {
     return (
       <Card>
@@ -32,6 +37,19 @@ export function MonthlyComparison({ data, loading }: MonthlyComparisonProps) {
     <Card>
       <CardHeader>
         <CardTitle>Comparação Mensal</CardTitle>
+        <div className="ml-auto flex items-center gap-2">
+          {selectedDate && (
+            <span className="text-sm text-muted-foreground mr-2">{selectedDate.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}</span>
+          )}
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={onPrev} aria-label="Mês anterior">
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={onNext} aria-label="Próximo mês">
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={320}>

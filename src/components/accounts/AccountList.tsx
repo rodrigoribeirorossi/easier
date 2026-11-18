@@ -23,7 +23,7 @@ export function AccountList() {
       return
     }
     loadAccounts()
-  }, [user && user.id])
+  }, [user?.id])
 
   async function loadAccounts() {
     try {

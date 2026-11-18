@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { formatCurrency } from '@/lib/formatters'
+import { Button } from '@/components/ui/button'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface EvolutionData {
   month: string
@@ -10,9 +12,12 @@ interface EvolutionData {
 interface EvolutionChartProps {
   data: EvolutionData[]
   loading?: boolean
+  selectedDate?: Date
+  onPrev?: () => void
+  onNext?: () => void
 }
 
-export function EvolutionChart({ data, loading }: EvolutionChartProps) {
+export function EvolutionChart({ data, loading, selectedDate, onPrev, onNext }: EvolutionChartProps) {
   if (loading) {
     return (
       <Card>
@@ -30,6 +35,19 @@ export function EvolutionChart({ data, loading }: EvolutionChartProps) {
     <Card>
       <CardHeader>
         <CardTitle>Evolução Patrimonial</CardTitle>
+        <div className="ml-auto flex items-center gap-2">
+          {selectedDate && (
+            <span className="text-sm text-muted-foreground mr-2">{selectedDate.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}</span>
+          )}
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={onPrev} aria-label="Mês anterior">
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={onNext} aria-label="Próximo mês">
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={320}>

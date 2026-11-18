@@ -126,6 +126,19 @@ export const api = {
     if (!response.ok) throw new Error('Failed to fetch categories')
     return response.json()
   },
+  async createCategory(data: any) {
+    const response = await request('/categories', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    if (!response.ok) {
+      let body: any = null
+      try { body = await response.json() } catch (e) { /* ignore */ }
+      const msg = body && (body.error || body.message) ? (body.error || body.message) : 'Failed to create category'
+      throw new Error(msg)
+    }
+    return response.json()
+  },
 
   // Payments
   async getPayments(params?: any) {
@@ -221,5 +234,46 @@ export const api = {
       method: 'DELETE',
     })
     if (!response.ok) throw new Error('Failed to delete investment')
+  },
+
+  // Debts
+  async getDebts() {
+    const response = await request('/debts')
+    if (!response.ok) throw new Error('Failed to fetch debts')
+    return response.json()
+  },
+
+  async createDebt(data: any) {
+    const response = await request('/debts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    if (!response.ok) throw new Error('Failed to create debt')
+    return response.json()
+  },
+
+  async updateDebt(id: string, data: any) {
+    const response = await request(`/debts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+    if (!response.ok) throw new Error('Failed to update debt')
+    return response.json()
+  },
+
+  async deleteDebt(id: string) {
+    const response = await request(`/debts/${id}`, {
+      method: 'DELETE',
+    })
+    if (!response.ok) throw new Error('Failed to delete debt')
+  },
+
+  async settleDebt(id: string, settledAt: string, paymentIds?: string[]) {
+    const response = await request(`/debts/${id}/settle`, {
+      method: 'POST',
+      body: JSON.stringify({ settledAt, paymentIds }),
+    })
+    if (!response.ok) throw new Error('Failed to settle debt')
+    return response.json()
   },
 }

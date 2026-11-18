@@ -115,3 +115,25 @@ export interface DashboardSummary {
   monthSavings: number
   totalInvestments: number
 }
+
+export interface Debt {
+  id: string
+  name: string
+  type: 'financing' | 'loan'
+  totalAmount: number
+  remainingAmount: number
+  installmentAmount: number
+  totalInstallments: number
+  paidInstallments: number
+  interestRate: number
+  startDate: Date
+  endDate: Date
+  settlementAmount?: number | null
+  description?: string | null
+  creditor?: string | null
+  status?: string // 'active' | 'settled'
+  settledAt?: Date | null
+  userId: string
+  createdAt: Date
+  updatedAt: Date
+}

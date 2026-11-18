@@ -28,7 +28,7 @@ export function IncomeList() {
       return
     }
     loadData()
-  }, [user && user.id])
+  }, [user?.id])
 
   async function loadData() {
     try {
