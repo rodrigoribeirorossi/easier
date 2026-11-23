@@ -1,4 +1,4 @@
 DROP INDEX "CreditCardInvoice_creditCardId_billingMonth_key";
 
 ALTER TABLE "CreditCardInvoice"
-DROP COLUMN "billingMonth";
+ALTER COLUMN "billingMonth" DROP NOT NULL;
