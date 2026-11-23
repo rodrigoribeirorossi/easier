@@ -58,7 +58,6 @@ model CreditCard {
 model CreditCardInvoice {
   id           String     @id @default(uuid())
   creditCardId String
-  billingMonth String?
   amount       Float
   dueDate      DateTime
   paidDate     DateTime?
