@@ -58,9 +58,18 @@ export function Sidebar() {
       )}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="p-6 border-b border-border dark:border-white/80">
-            <h1 className="text-2xl font-bold text-primary">easier</h1>
-            <p className="text-sm text-muted-foreground">Controle Financeiro</p>
+          <div className="border-b border-border p-6 dark:border-white/80">
+            <img
+              src="/Titulo-light.svg"
+              alt="easier — Controle Financeiro"
+              className="block h-auto w-full dark:hidden"
+            />
+            <img
+              src="/Titulo-dark.svg"
+              alt=""
+              aria-hidden="true"
+              className="hidden h-auto w-full dark:block"
+            />
           </div>
 
           {/* Navigation */}

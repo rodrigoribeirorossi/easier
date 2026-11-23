@@ -15,7 +15,7 @@ async function request(path: string, options: RequestInit = {}) {
   }
 
   // If there's no token and no stored user, forbid data-fetching endpoints on the client
-  const dataEndpoints = ['/accounts', '/transactions', '/payments', '/investments', '/categories']
+  const dataEndpoints = ['/accounts', '/transactions', '/payments', '/investments', '/categories', '/credit-cards']
   if (!token && !userId && dataEndpoints.some(e => path.startsWith(e))) {
     // Return a synthetic 401 Response so callers treat it as unauthorized
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -84,6 +84,81 @@ export const api = {
       method: 'DELETE',
     })
     if (!response.ok) throw new Error('Failed to delete account')
+  },
+
+  // Credit cards and invoices
+  async getCreditCards() {
+    const response = await request('/credit-cards')
+    if (!response.ok) throw new Error('Failed to fetch credit cards')
+    return response.json()
+  },
+
+  async createCreditCard(data: { accountId: string; name: string }) {
+    const response = await request('/credit-cards', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    if (!response.ok) {
+      const body = await response.json().catch(() => null)
+      throw new Error(body?.error || 'Failed to create credit card')
+    }
+    return response.json()
+  },
+
+  async updateCreditCard(id: string, data: { name: string }) {
+    const response = await request(`/credit-cards/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+    if (!response.ok) {
+      const body = await response.json().catch(() => null)
+      throw new Error(body?.error || 'Failed to update credit card')
+    }
+    return response.json()
+  },
+
+  async createCreditCardInvoice(cardId: string, data: {
+    amount: number
+    dueDate: string
+    paidDate: string | null
+    status: 'pending' | 'paid'
+  }) {
+    const response = await request(`/credit-cards/${cardId}/invoices`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    if (!response.ok) {
+      const body = await response.json().catch(() => null)
+      throw new Error(body?.error || 'Failed to create credit card invoice')
+    }
+    return response.json()
+  },
+
+  async updateCreditCardInvoice(cardId: string, invoiceId: string, data: {
+    amount: number
+    dueDate: string
+    paidDate: string | null
+    status: 'pending' | 'paid'
+  }) {
+    const response = await request(`/credit-cards/${cardId}/invoices/${invoiceId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+    if (!response.ok) {
+      const body = await response.json().catch(() => null)
+      throw new Error(body?.error || 'Failed to update credit card invoice')
+    }
+    return response.json()
+  },
+
+  async deleteCreditCardInvoice(cardId: string, invoiceId: string) {
+    const response = await request(`/credit-cards/${cardId}/invoices/${invoiceId}`, {
+      method: 'DELETE',
+    })
+    if (!response.ok) {
+      const body = await response.json().catch(() => null)
+      throw new Error(body?.error || 'Failed to delete credit card invoice')
+    }
   },
 
   // Transactions

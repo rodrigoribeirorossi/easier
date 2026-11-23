@@ -1,5 +1,5 @@
 import { formatCurrency } from '@/lib/formatters'
-import { Plus, CheckCircle2, Clock, AlertCircle, Landmark, HandCoins } from 'lucide-react'
+import { Plus, CheckCircle2, Clock, AlertCircle, Landmark, HandCoins, CreditCard } from 'lucide-react'
 
 interface PaymentEventProps {
   payment: any
@@ -23,6 +23,7 @@ export function PaymentEvent({ payment, onClick }: PaymentEventProps) {
   )
 
   const isDebt = Boolean(payment && (payment._type === 'debt' || payment.type === 'debt'))
+  const isCreditCardInvoice = payment?._type === 'creditCardInvoice'
 
   const cleanName = (name: any) => {
     try {
@@ -52,6 +53,10 @@ export function PaymentEvent({ payment, onClick }: PaymentEventProps) {
               ? <HandCoins className="h-3 w-3 text-orange-500" />
               : <Landmark className="h-3 w-3 text-blue-500" />
             }
+          </div>
+        ) : isCreditCardInvoice ? (
+          <div className="h-4 w-4 flex items-center justify-center flex-shrink-0" title="Fatura de cartão de crédito">
+            <CreditCard className="h-3 w-3 text-primary" />
           </div>
         ) : (
           <div className="h-4 w-4 flex items-center justify-center flex-shrink-0" title={statusCfg.label}>

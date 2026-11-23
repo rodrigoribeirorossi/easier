@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import useUser from '@/hooks/useUser'
 import { api } from '@/lib/api'
-import { Payment, Account, Category } from '@/types'
+import { Payment, Account, Category, CreditCard as CreditCardAccount } from '@/types'
 import { expandRecurringPaymentOccurrences, generateRecurringDates, formatCurrency, formatDate, getMonthName, parseAsLocalDate } from '@/lib/formatters'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ChevronLeft, ChevronRight, CreditCard, Plus, Scale, CheckCircle2, Clock, AlertCircle, Pencil, X } from 'lucide-react'
 import { PaymentEvent } from './PaymentEvent'
 import { PaymentForm } from '@/components/payments/PaymentForm'
+import { CreditCardInvoiceDialog, CreditCardInvoiceInput } from '@/components/payments/CreditCardInvoiceDialog'
 import { TransactionForm } from '@/components/transactions/TransactionForm'
 import { cn } from '@/lib/utils'
 
@@ -148,6 +149,7 @@ function QuickDebtDialog({ open, onOpenChange, onSubmit }: { open: boolean; onOp
 
 export function FinancialCalendar() {
   const [payments, setPayments] = useState<Payment[]>([])
+  const [creditCardInvoiceItems, setCreditCardInvoiceItems] = useState<any[]>([])
   const [incomeItems, setIncomeItems] = useState<any[]>([])
   const [debtItems, setDebtItems] = useState<any[]>([])
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -159,6 +161,7 @@ export function FinancialCalendar() {
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [creditCardInvoiceDialogOpen, setCreditCardInvoiceDialogOpen] = useState(false)
   const [markingPaid, setMarkingPaid] = useState(false)
   const [quickCreate, setQuickCreate] = useState<'payment' | 'income' | 'debt' | null>(null)
   const [quickMenuOpen, setQuickMenuOpen] = useState(false)
@@ -168,6 +171,7 @@ export function FinancialCalendar() {
   useEffect(() => {
     if (!user) {
       setPayments([])
+      setCreditCardInvoiceItems([])
       setLoading(false)
       return
     }
@@ -183,7 +187,18 @@ export function FinancialCalendar() {
     if (!selectedEvent) return
     setMarkingPaid(true)
     try {
-      if (String(selectedEvent.id).includes('::')) {
+      if (selectedEvent._type === 'creditCardInvoice') {
+        const today = new Date()
+        const paidDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+        const due = parseAsLocalDate(selectedEvent.dueDate)
+        const dueDate = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`
+        await api.updateCreditCardInvoice(selectedEvent.creditCardId, selectedEvent.invoiceId, {
+          amount: Number(selectedEvent.amount),
+          dueDate,
+          paidDate,
+          status: 'paid',
+        })
+      } else if (String(selectedEvent.id).includes('::')) {
         // Generated occurrence — create a DB occurrence record for this specific month
         const parts = String(selectedEvent.id).split('::')
         const baseId = parts[0]
@@ -223,6 +238,7 @@ export function FinancialCalendar() {
 
   async function handleEditFromDetail() {
     setDetailOpen(false)
+    if (selectedEvent?._type === 'creditCardInvoice') return
     // For income, use cached original data; for payment, load base
     if (selectedEvent?._type === 'income') {
       const txn = selectedEvent._originalData ?? selectedEvent
@@ -244,6 +260,13 @@ export function FinancialCalendar() {
       await api.updatePayment(selectedEvent.id, data)
     }
     setEditOpen(false)
+    loadPayments()
+  }
+
+  async function handleCreditCardInvoiceSave(data: CreditCardInvoiceInput) {
+    if (!selectedEvent?._invoice) return
+    await api.updateCreditCardInvoice(selectedEvent.creditCardId, selectedEvent.invoiceId, data)
+    setCreditCardInvoiceDialogOpen(false)
     loadPayments()
   }
 
@@ -280,13 +303,14 @@ export function FinancialCalendar() {
   async function loadPayments() {
     try {
       setLoading(true)
-      const [paymentsData, incomesData, accountsData, catsExpense, catsIncome, debtsData] = await Promise.all([
+      const [paymentsData, incomesData, accountsData, catsExpense, catsIncome, debtsData, creditCardsData] = await Promise.all([
         api.getPayments(),
         api.getTransactions({ type: 'income' }),
         api.getAccounts(),
         api.getCategories('expense'),
         api.getCategories('income'),
         api.getDebts(),
+        api.getCreditCards(),
       ])
       setAccounts(accountsData || [])
       // merge and deduplicate categories by normalized name to avoid repeated options in the quick-create forms
@@ -381,7 +405,30 @@ export function FinancialCalendar() {
       })
       setDebtItems(debtCalendarItems)
 
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const creditCardInvoiceCalendarItems = (creditCardsData as CreditCardAccount[]).flatMap(card =>
+        card.invoices.map(invoice => {
+          const dueDate = parseAsLocalDate(invoice.dueDate)
+          const status = invoice.status === 'pending' && dueDate < today ? 'overdue' : invoice.status
+          return {
+            ...invoice,
+            id: `credit-card-invoice::${invoice.id}`,
+            invoiceId: invoice.id,
+            creditCardId: card.id,
+            creditCardName: card.name,
+            _invoice: invoice,
+            name: `Fatura ${card.name}`,
+            status,
+            dueDate,
+            isRecurring: false,
+            _type: 'creditCardInvoice',
+          }
+        }),
+      )
+
       setPayments(expandedPayments)
+      setCreditCardInvoiceItems(creditCardInvoiceCalendarItems)
       setIncomeItems(expandedIncomes)
 
       // compute entries sum for current month
@@ -392,7 +439,7 @@ export function FinancialCalendar() {
       }).reduce((s: number, t: any) => s + (Number(t.amount) || 0), 0)
       setEntriesSum(entriesSumVal)
       // also compute payments sum for current month to use in balance/coloring (includes debts)
-      const paymentsSumVal = [...expandedPayments, ...debtCalendarItems].filter((p: any) => {
+      const paymentsSumVal = [...expandedPayments, ...debtCalendarItems, ...creditCardInvoiceCalendarItems].filter((p: any) => {
         const d = parseAsLocalDate(p.dueDate)
         return d.getFullYear() === year && d.getMonth() === month
       }).reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0)
@@ -407,7 +454,7 @@ export function FinancialCalendar() {
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
 
-  const pendingTotal = [...payments, ...debtItems]
+  const pendingTotal = [...payments, ...debtItems, ...creditCardInvoiceItems]
     .filter(item => {
       if (item.status !== 'pending') return false
       const dueDate = parseAsLocalDate(item.dueDate)
@@ -447,7 +494,13 @@ export function FinancialCalendar() {
       const dt = parseAsLocalDate(debt.dueDate)
       return dt.getDate() === day && dt.getMonth() === month && dt.getFullYear() === year
     })
-    return [...p, ...d, ...i]
+    const creditCardInvoices = creditCardInvoiceItems.filter(invoice => {
+      const invoiceDate = parseAsLocalDate(invoice.dueDate)
+      return invoiceDate.getDate() === day &&
+        invoiceDate.getMonth() === month &&
+        invoiceDate.getFullYear() === year
+    })
+    return [...p, ...creditCardInvoices, ...d, ...i]
   }
 
   const days = []
@@ -669,6 +722,7 @@ export function FinancialCalendar() {
       {detailOpen && selectedEvent && (() => {
         const isInc = selectedEvent._type === 'income'
         const isDebt = selectedEvent._type === 'debt'
+        const isCreditCardInvoice = selectedEvent._type === 'creditCardInvoice'
         const status = selectedEvent.status as string
         const isPaid = status === 'paid'
         const isOverdue = status === 'overdue'
@@ -709,6 +763,11 @@ export function FinancialCalendar() {
                   {selectedEvent._debt.interestRate > 0 && <p>Taxa: {selectedEvent._debt.interestRate}% a.a.</p>}
                 </div>
               )}
+              {isCreditCardInvoice && selectedEvent.paidDate && (
+                <p className="mb-4 text-xs text-muted-foreground">
+                  Pago em {formatDate(selectedEvent.paidDate)}
+                </p>
+              )}
 
               {/* Status badge */}
               {!isInc && (
@@ -732,15 +791,30 @@ export function FinancialCalendar() {
                       {markingPaid ? 'Salvando...' : 'Marcar como pago'}
                     </Button>
                   )}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className={cn(!isInc && !isPaid ? '' : 'flex-1')}
-                    onClick={handleEditFromDetail}
-                  >
-                    <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                    Editar
-                  </Button>
+                  {isCreditCardInvoice ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        setDetailOpen(false)
+                        setCreditCardInvoiceDialogOpen(true)
+                      }}
+                    >
+                      <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                      Editar
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className={cn(!isInc && !isPaid ? '' : 'flex-1')}
+                      onClick={handleEditFromDetail}
+                    >
+                      <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                      Editar
+                    </Button>
+                  )}
                 </div>
               )}
               {isDebt && (
@@ -817,6 +891,15 @@ export function FinancialCalendar() {
           accounts={accounts}
           categories={categories}
           onSubmit={handleTransactionSave}
+        />
+      )}
+      {selectedEvent?._type === 'creditCardInvoice' && (
+        <CreditCardInvoiceDialog
+          open={creditCardInvoiceDialogOpen}
+          onOpenChange={setCreditCardInvoiceDialogOpen}
+          cardName={selectedEvent.creditCardName}
+          invoice={selectedEvent._invoice}
+          onSubmit={handleCreditCardInvoiceSave}
         />
       )}
     </div>

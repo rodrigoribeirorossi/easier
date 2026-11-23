@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import useUser from '@/hooks/useUser'
 import { api } from '@/lib/api'
-import { Payment, Account, Category } from '@/types'
+import { Payment, Account, Category, CreditCard } from '@/types'
 import { expandRecurringPaymentOccurrences, formatCurrency, formatDate, getPaymentStatusLabel, parseAsLocalDate } from '@/lib/formatters'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -10,10 +10,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus, Edit, Trash2, CheckCircle } from 'lucide-react'
 import { PaymentForm } from './PaymentForm'
 import { RecurringPayments } from './RecurringPayments'
+import { CreditCardSection } from './CreditCardSection'
 
 export function PaymentList() {
   const [payments, setPayments] = useState<Payment[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -27,6 +29,7 @@ export function PaymentList() {
     if (!user) {
       setPayments([])
       setAccounts([])
+      setCreditCards([])
       setCategories([])
       setLoading(false)
       return
@@ -37,10 +40,11 @@ export function PaymentList() {
   async function loadData() {
     try {
       setLoading(true)
-      const [pmts, accs, cats] = await Promise.all([
+      const [pmts, accs, cats, cards] = await Promise.all([
         api.getPayments(),
         api.getAccounts(),
         api.getCategories('expense'),
+        api.getCreditCards(),
       ])
       // Expand recurring payments into occurrences (up to 12 months) so each month can be managed separately
       const expanded: any[] = []
@@ -57,6 +61,7 @@ export function PaymentList() {
       expanded.sort((a, b) => parseAsLocalDate(a.dueDate).getTime() - parseAsLocalDate(b.dueDate).getTime())
       setPayments(expanded)
       setAccounts(accs)
+      setCreditCards(cards)
       // dedupe categories by id first, then by name to avoid repeated labels
       const catsArr = Array.isArray(cats) ? cats : []
       const seen = new Set<string>()
@@ -165,6 +170,13 @@ export function PaymentList() {
           Novo Pagamento
         </Button>
       </div>
+
+      <CreditCardSection
+        accounts={accounts}
+        cards={creditCards}
+        loading={loading}
+        onRefresh={loadData}
+      />
 
       <RecurringPayments
         payments={payments}

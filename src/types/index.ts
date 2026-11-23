@@ -22,6 +22,28 @@ export interface Account {
   updatedAt: Date
 }
 
+export interface CreditCardInvoice {
+  id: string
+  creditCardId: string
+  amount: number
+  dueDate: Date
+  paidDate?: Date | null
+  status: 'pending' | 'paid'
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface CreditCard {
+  id: string
+  name: string
+  accountId: string
+  userId: string
+  account?: Pick<Account, 'id' | 'name' | 'type' | 'color'>
+  invoices: CreditCardInvoice[]
+  createdAt: Date
+  updatedAt: Date
+}
+
 export interface Category {
   id: string
   name: string

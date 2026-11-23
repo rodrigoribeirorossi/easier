@@ -10,6 +10,7 @@ import categoriesRouter from './routes/categories.js';
 import usersRouter from './routes/users.js';
 import authRouter from './routes/auth.js';
 import debtsRouter from './routes/debts.js';
+import creditCardsRouter from './routes/creditCards.js';
 import attachUser from './middleware/attachUser.js';
 import authMiddleware from './middleware/authMiddleware.js';
 import debugRouter from './routes/debug.js';
@@ -81,6 +82,7 @@ app.use('/api/payments', authMiddleware, paymentsRouter);
 app.use('/api/investments', authMiddleware, investmentsRouter);
 app.use('/api/categories', authMiddleware, categoriesRouter);
 app.use('/api/debts', authMiddleware, debtsRouter);
+app.use('/api/credit-cards', authMiddleware, creditCardsRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/auth', authRouter);
 app.get('/health', (_req, res) => {
